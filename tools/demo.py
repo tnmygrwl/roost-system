@@ -24,7 +24,7 @@ request = {"station": "KDOX", "date": ("20101001", "20101001")}
 
 
 ######################## paths and directories ############################
-ckpt_path           = "../checkpoints/extire_lr_0.001.pth"
+ckpt_path           = "../checkpoints/entire_lr_0.001.pth"
 windfarm_database   = "../src/roosts/utils/uswtdb_v1_3_20190107.csv"
 data_root           = "./data"
 scan_dir            = os.path.join(data_root, 'scans')  # save raw scans downloaded from AWS
@@ -115,10 +115,10 @@ for day_idx, scan_paths in enumerate(downloader):
     visualizer.generate_web_files(cleaned_detections,tracks,os.path.join(ui_data_dir, f'{station_day}.txt'))
 
 
-    print("Total time elapse: {}".format(time.time()-start_time))
+    print("Total time elapse: {}".format(time.time() - start_time))
 
     # import pdb; pdb.set_trace()
     print()
-    print(f"---------------------- Day {day_idx+2} -----------------------\n")
+    print(f"-------------------- Day {day_idx+2} --------------------\n")
 
 

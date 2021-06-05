@@ -54,7 +54,6 @@ For GPU, check the cuda version at, for example, `/usr/local/cuda`, or potential
     pip install -e detectron2
     
     cd ..
-    # conda install -c conda-forge scikit-learn  # fast nearest neightbor searching using ball tree for wind farm dataset
     pip install -e .
     ```
 

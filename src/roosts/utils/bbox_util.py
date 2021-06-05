@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def calculate_box_overlap(box, boxes):
 
     if boxes.ndim == 1:
