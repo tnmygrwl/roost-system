@@ -2,13 +2,14 @@ from setuptools import find_packages, setup
 
 install_requires = [
     "torch",
+    "opencv-python",
     ### data ###
     "pytz",             # time zone, 2021.1
     "ephem",            # 3.7.7.1
     "geopy",            # 2.1.0
     ### system ###
-    'wsrlib',
-    'detectron2',
+    'wsrlib @ git+https://github.com/darkecology/pywsrlib#egg=wsrlib',
+    'detectron2 @ git+https://github.com/facebookresearch/detectron2.git#egg=detectron2',
     'imageio',          # saving gif, 2.9.0
     'scikit-learn',     # nearest neighbor search using ball tree for wind farm, 0.24.2
 ]
