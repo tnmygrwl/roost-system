@@ -1,7 +1,7 @@
 import geopy
 from geopy import distance
 import numpy as np
-from roosts.utils.sunset_util import get_sunrise_time
+from roosts.utils.sunrise_util import get_sunrise_time
 from roosts.utils.nexrad_util import NEXRAD_LOCATIONS
 
 def euclid_distance(p, q):
@@ -23,6 +23,7 @@ def sunrise_time(radar_name):
     day = radar_name[10:12]
     date = '{:s}-{:s}-{:s}'.format(year, month, day)
     rising_time = get_sunrise_time(station, date)
+    rising_time = rising_time.minute + rising_time.hour * 60.
     return rising_time
 
 def cart2pol(x, y):

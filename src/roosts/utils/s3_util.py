@@ -1,7 +1,6 @@
 import boto3
 import botocore
 from datetime import datetime, timedelta
-
 import re
 import os.path
 import errno    
@@ -11,7 +10,7 @@ import sys
 ####################################
 # Helpers
 ####################################
-def datetime_range(start=None, end=None, delta=timedelta(minutes=1), inclusive=False):
+def datetime_range(start=None, end=None, delta=timedelta(minutes=1), inclusive=True):
     """Construct a generator for a range of dates
     
     Args:
@@ -67,21 +66,13 @@ def s3_key(t, station):
     return key
 
 def s3_prefix(t, station=None):
-        
-    prefix = '%04d/%02d/%02d' % (
-        t.year, 
-        t.month, 
-        t.day
-    )
-
-    if not station is None:
-        prefix = prefix + '/%04s/%04s' % ( station, station )
-    
+    prefix = '%04d/%02d/%02d' % (t.year, t.month, t.day)
+    if station is not None:
+        prefix = prefix + '/%04s/%04s' % (station, station)
     return prefix
-    
 
-def parse_key( key ):
-    path, key = os.path.split( key )
+def parse_key(key):
+    path, key = os.path.split(key)
     vals = re.match('(\w{4})(\d{4}\d{2}\d{2}_\d{2}\d{2}\d{2})(\.?\w+)', key)
     (station, timestamp, suffix) = vals.groups()
     t = datetime.strptime(timestamp, '%Y%m%d_%H%M%S')
@@ -96,158 +87,60 @@ def mkdir_p(path):
         else:
             raise
 
-#start_time = datetime(2015, 5, 2,  0,  0,  0)
-#end_time   = datetime(2015, 5, 2,  0, 29, 59)    
-#stations = ['KLIX', 'KLCH', 'KLIX']
-
-stride_in_minutes  = 3 # in minutes
-thresh_in_minutes  = 3
 
 ####################################
 # AWS setup
 ####################################
-
-# Get s3 Bucket resource
-bucket = boto3.resource('s3', region_name='us-east-2').Bucket('noaa-nexrad-level2');
+bucket = boto3.resource('s3', region_name='us-east-2').Bucket('noaa-nexrad-level2')
 darkecology_bucket = boto3.resource('s3', region_name='us-east-2').Bucket('cajun-batch-test')
-def get_scans(start_time, end_time, stations, select_by_time=False, time_increment=None, stride_increment=None, thresh_increment=None, with_station=True):
-    #################
-    # First get a list of all keys that are within the desired time period
-    # and divide by station 
-    #################
 
-    all_keys = [];
-    keys_by_station = { s: [] for s in stations }
-    
-    if not time_increment:
-        time_increment = timedelta(days=1)
-    
-    if not stride_increment:
-        stride_increment = timedelta(minutes=stride_in_minutes)
-    
-    if not thresh_increment:
-        thresh_increment = timedelta(minutes=thresh_in_minutes)
+def get_station_day_scan_keys(start_time, end_time, station, stride_in_minutes=3, thresh_in_minutes=3):
 
-    for station in stations:
-        for t in datetime_range( start_time, end_time, time_increment, inclusive=True ):
-                    
-            # Set filter
-            prefix = s3_prefix(t, station)
-            #print prefix
-                    
-            start_key = s3_key(start_time, station)
-            end_key   = s3_key(  end_time, station)
-            
-            # Get s3 objects for this day
-            objects = bucket.objects.filter(Prefix=prefix)
-            
-            # Select keys that fall between our start and end time
-            keys = [o.key for o in objects
-                    if  o.key >= start_key
-                    and o.key <= end_key ]
-            
-            # Add to running lists
-            all_keys.extend(keys)
-            keys_by_station[station].extend(keys)
-    #print(all_keys)
-    #################
-    # Now iterate by time and select the appropriate scan for each station
-    #################
+    prefix = s3_prefix(start_time, station)
+    start_key = s3_key(start_time, station)
+    end_key = s3_key(end_time, station)
 
-    time_thresh = thresh_increment #timedelta( minutes = thresh_in_minutes )
+    # Get s3 objects for this day
+    objects = bucket.objects.filter(Prefix=prefix)
 
-    times = list( datetime_range( start_time, end_time, stride_increment ) )
+    # Select keys that fall between our start and end time
+    keys = [o.key for o in objects
+                if o.key >= start_key
+                and o.key <= end_key]
+    if not keys:
+        return []
 
-    current             = { s:  0    for s in stations }
-    selected_by_time    = { t: set() for t in times }
-    #selected_by_station = { s: set() for s in stations }
-    selected_keys       = []
-    
+    # iterate by time and select the appropriate scans
+    times = list(datetime_range(start_time, end_time, timedelta(minutes=stride_in_minutes)))
+    time_thresh = timedelta(minutes=thresh_in_minutes)
+
+    selected_keys = []
+    current_idx = 0
     for t in times:
-        for station in stations:
+        t_current, _ = parse_key(keys[current_idx])
 
-            keys = keys_by_station[station]
-            i = current[station]
+        while current_idx + 1 < len(keys):
+            t_next, _ = parse_key(keys[current_idx + 1])
+            if abs(t_current - t) < abs(t_next - t):
+                break
+            t_current = t_next
+            current_idx += 1
 
-            if keys:
-                
-                t_current, _ = parse_key(keys[i])
+        if abs(t_current - t) <= time_thresh:
+            selected_keys.append(keys[current_idx])
 
-                while i + 1 < len( keys ) :
-                    t_next, _ = parse_key(keys[i + 1])
-                    if abs( t_current - t ) < abs( t_next - t ):
-                        break 
-                    t_current = t_next
-                    i = i + 1
-
-                current[station] = i
-
-                k = keys[i]
-
-                if abs( t_current - t ) <= time_thresh :
-                    if select_by_time:
-                        selected_by_time[t].add(k)
-                    #selected_by_station[station].add(k)
-                    if with_station:
-                        selected_keys.append("%s;%s"%(k,station))
-                    else:
-                        selected_keys.append(k)
-    return selected_keys if not select_by_time else selected_by_time
+    return selected_keys
 
 
 def download_scans(keys, data_dir):
-    #################
-    # Download files into hierarchy
-    #################
-    for key in keys: 
+    for key in keys:
         # Download files
-        local_file = '%s/%s' % (data_dir, key)
-        local_path, filename = os.path.split( local_file )
-        mkdir_p(local_path)  
-    
+        local_file = os.path.join(data_dir, key)
+        local_path, filename = os.path.split(local_file)
+        mkdir_p(local_path)
+
         # Download file if we don't already have it
         if not os.path.isfile(local_file):
             bucket.download_file(key, local_file)
 
-def download_one_scan(key, data_dir):
-    #################
-    # Download files into hierarchy
-    #################
-
-    # Download files
-    local_file = '%s/%s' % (data_dir, key)
-    local_path, filename = os.path.split( local_file )
-    mkdir_p(local_path)  
-
-    # Download file if we don't already have it
-    if not os.path.isfile(local_file):
-        bucket.download_file(key, local_file)
-
     return local_file
-
-
-def download_cajun_out_profiles(scan_keys, out_dir):
-    out_files = ['profile.csv', 'scan.csv']
-    for scan in scan_keys:
-        for out_file in out_files:
-            key = '%s/%s'%(scan,out_file)
-            
-            #Download files
-            url = 'dark_ecology/cajun/north_east_aug_dec_2010/%s'%key
-            local_file = '%s/%s'%(out_dir,key)
-            local_path, filename = os.path.split( local_file )
-            #Check if file exists, if yes then download it
-            try:
-                #Make a HEAD request to quickly check if file exists. Ref - https://stackoverflow.com/a/33843019/1026535
-                #If file doesn't exists this call will fail with 404
-                darkecology_bucket.Object(url).load()
-                #If we reach here, then file exists
-                print("Downloading %s"%url)
-                mkdir_p(local_path)      
-                # Download file if we don't already have it
-                if not os.path.isfile(local_file):
-                    darkecology_bucket.download_file(url, local_file)
-            except(botocore.exceptions.ClientError, e):
-                #print(str(e))
-		#Just move to the next file
-                pass

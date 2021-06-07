@@ -1,16 +1,12 @@
 # Detecting and Tracking Communal Bird Roosts in Weather Radar Data
 This repo implements a machine learning system for detecting and tracking communal bird roosts 
-in weather surveillance radar data. It is a continuation of work by Cheng et al. [1].
+in weather surveillance radar data, continuing work by Cheng et al. [1].
 Roost detection is based on [Detectron2](https://github.com/darkecology/detectron2) using PyTorch.
 
 #### Under Development
 - [ ] log
 - [ ] dir structure, rsync results from swarm to doppler
-- [ ] flip images during rendering, and also flip the y axis in the bounding box
-       - [ ] renderer.py
-       - [ ] utils/postprocess.py
-- [ ] downloaded scans may not match the request. 
-For example, {"station": "KDOX", "date": ("20101001", "20101001")} will download KDOX20101002 scans
+- [ ] image and bbox directions: utils/postprocess.py
 - [ ] deployment: greatlake; scans with the old model; a year-station pair
 
 #### Repository Overview
@@ -31,7 +27,7 @@ For example, {"station": "KDOX", "date": ("20101001", "20101001")} will download
 #### Installation and Preparation
 1. Create and activate a python 3.6 environment. 
 Install compatible [PyTorch](https://pytorch.org/get-started/previous-versions/) and OpenCV.
-For GPU, check the cuda version at, for example, `/usr/local/cuda`, or potentially by `nvcc -V`. 
+For running detection with GPU, check the cuda version at, for example, `/usr/local/cuda`, or potentially by `nvcc -V`. 
     ```bash
     conda create -n roost2021 python=3.6
     conda activate roost2021

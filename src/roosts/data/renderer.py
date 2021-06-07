@@ -5,12 +5,9 @@ import logging
 import time
 import matplotlib.pyplot as plt
 import matplotlib.colors as pltc
-import cv2
-import roosts.utils.file_util as fileUtil
-import glob
+from matplotlib import image
 from tqdm import tqdm
 
-ARRAY_VERSION       = "v0.1.0" # corresponding to arrays defined by the following lines
 ARRAY_Y_DIRECTION   = "xy" # default radar direction, y is first dim (row), large y is north, row 0 is south
 ARRAY_R_MAX         = 150000.0
 ARRAY_DIM           = 600
@@ -45,7 +42,6 @@ DUALPOL_RENDER_CONFIG   = {"ydirection":          ARRAY_Y_DIRECTION,
                            "interp_method":       "nearest"}
 
 ####### render as images #######
-CHANNELS = [("reflectivity", 0.5), ("velocity", 0.5)]
 # visualization settings
 COLOR_ARRAY = [
     '#006400', # for not scaled boxes
@@ -72,46 +68,63 @@ class Renderer:
         render ref1 and rv1 for visualization     
         delete the radar scans 
 
-        input: paths of scan list, outpath npz files and 
-        output: paths of npz file used for detector
+        input: directories to save rendered arrays and images and rendering configs
+        output: npz_files: for detection module to load/preprocess data
+                img_files: for visualization
+                scan_names: for tracking module to know the full image set
 
     """
 
     def __init__(self, 
-                 outpath=None,
+                 npz_dir, roosts_ui_data_dir,
                  array_render_config=ARRAY_RENDER_CONFIG, 
                  dualpol_render_config=DUALPOL_RENDER_CONFIG):
 
-        self.outpath = outpath
-        self.npzpath = os.path.join(outpath, 'npz')
-        self.imgpath = os.path.join(outpath, 'img')
-        self.array_render_config = array_render_config 
+        self.npzdir = npz_dir
+        self.ref_imgdir = os.path.join(roosts_ui_data_dir, 'ref0.5_images')
+        self.rv_imgdir = os.path.join(roosts_ui_data_dir, 'rv0.5_images')
+        self.imgdirs = {("reflectivity", 0.5): self.ref_imgdir, ("velocity", 0.5): self.rv_imgdir}
+        self.array_render_config = array_render_config
         self.dualpol_render_config = dualpol_render_config
-
-        fileUtil.mkdir(self.outpath)
-        fileUtil.mkdir(self.npzpath)
-        fileUtil.mkdir(self.imgpath)
 
 
     def render(self, scan_paths):
+        scan = os.path.splitext(os.path.basename(scan_paths[0]))[0]
+        station = scan[0:4]
+        year = scan[4:8]
+        month = scan[8:10]
+        date = scan[10:12]
+        key_prefix = f"{year}/{month}/{date}/{station}"
 
-        npz_files = []
-        img_files = []
-        scan_names = []
+        npzdir = os.path.join(self.npzdir, key_prefix)
+        ref_imgdir = os.path.join(self.ref_imgdir, key_prefix)
+        rv_imgdir = os.path.join(self.rv_imgdir, key_prefix)
+        os.makedirs(npzdir, exist_ok = True)
+        os.makedirs(ref_imgdir, exist_ok = True)
+        os.makedirs(rv_imgdir, exist_ok = True)
 
-        logger = logging.getLogger(__name__)
-        if not logger.handlers:
-            formatter = logging.Formatter('%(asctime)s [ %(name)s ] : %(message)s')
-            formatter.converter = time.gmtime
-            logger.setLevel(logging.INFO)
+        log_path = os.path.join(npzdir, "rendering.log")
+        array_error_log_path = os.path.join(npzdir, "array_error_scans.log")
+        dualpol_error_log_path = os.path.join(npzdir, "dualpol_error_scans.log")
+        logger = logging.getLogger(key_prefix)
+        filelog = logging.FileHandler(log_path)
+        formatter = logging.Formatter('%(asctime)s : %(message)s')
+        formatter.converter = time.gmtime
+        filelog.setFormatter(formatter)
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(filelog)
+
+        npz_files = [] # for detection module to load/preprocess data
+        img_files = [] # for visualization
+        scan_names = [] # for tracking module to know the full image set
+        array_errors = []  # to record scans from which array rendering fails
+        dualpol_errors = []  # to record scans from which dualpol array rendering fails
 
         for scan_file in tqdm(scan_paths, desc="Rendering"):
             
             scan = os.path.splitext(os.path.basename(scan_file))[0]
-
-            npz_path = os.path.join(self.npzpath, f'{scan}.npz')
-            ref1_path = os.path.join(self.imgpath, f'{scan}_ref1.jpg')
-            rv1_path = os.path.join(self.imgpath, f'{scan}_rv1.jpg')
+            npz_path = os.path.join(npzdir, f"{scan}.npz")
+            ref1_path = os.path.join(self.ref_imgdir, f"{scan}.png")
 
             if os.path.exists(npz_path) and os.path.exists(ref1_path):
                 npz_files.append(npz_path)
@@ -125,7 +138,9 @@ class Renderer:
                 radar = pyart.io.read_nexrad_archive(scan_file)
                 logger.info('Loaded scan %s' % scan)
             except Exception as ex:
-                # logger.error('Exception while loading scan %s - %s' % (scan, str(ex)))
+                logger.error('Exception while loading scan %s - %s' % (scan, str(ex)))
+                array_errors.append(scan)
+                dualpol_errors.append(scan)
                 continue
 
             try:
@@ -137,6 +152,7 @@ class Renderer:
                 arrays["array"] = data
             except Exception as ex:
                 logger.error('Exception while rendering a npy array from scan %s - %s' % (scan, str(ex)))
+                array_errors.append(scan)
 
             try:
                 data, _, _, y, x = radar2mat(radar, **self.dualpol_render_config)
@@ -146,38 +162,35 @@ class Renderer:
                     logger.info(f"  Unexpectedly, its shape is {data.shape}.")
                 arrays["dualpol_array"] = data
             except Exception as ex:
-                # logger.error('Exception while rendering a dualpol npy array from scan %s - %s' % (scan, str(ex)))
-                pass
+                logger.error('Exception while rendering a dualpol npy array from scan %s - %s' % (scan, str(ex)))
+                dualpol_errors.append(scan)
 
             if len(arrays) > 0:
                 np.savez_compressed(npz_path, **arrays)
-                self.render_img(arrays["array"], scan, ref1_path, rv1_path) # render ref1 and rv1 images 
+                self.render_img(arrays["array"], key_prefix, scan) # render ref1 and rv1 images
                 npz_files.append(npz_path)
                 img_files.append(ref1_path)
                 scan_names.append(scan)
 
+        if len(array_errors) > 0:
+            with open(array_error_log_path, 'a+') as f:
+                f.write('\n'.join(array_errors) + '\n')
+        if len(dualpol_errors) > 0:
+            with open(dualpol_error_log_path, 'a+') as f:
+                f.write('\n'.join(dualpol_errors) + '\n')
+
+        del logger
         return npz_files, img_files, scan_names 
 
 
-    def render_img(self, array, scan, ref1_path, rv1_path):
+    def render_img(self, array, key_prefix, scan):
         # input: numpy array containing radar products
-        outpath = {"reflectivity": ref1_path, "velocity": rv1_path}
         attributes = self.array_render_config['fields']
         elevations = self.array_render_config['elevs']
-        for i, (attr, elev) in enumerate(CHANNELS):
+        for attr, elev in self.imgdirs:
             cm = plt.get_cmap(pyart.config.get_field_colormap(attr))
             rgb = cm(NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :]))
-            rgb = (rgb * 255).astype(np.uint8) # cv2 requires uint8 to write an image
-            rgb = rgb[:, :, :3]  # omit the fourth alpha dimension, NAN are black but not white
-            cv2.imwrite(outpath[attr], cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
-
-
-if __name__ == "__main__":
-    
-    scan_root = './scans/2021/05/24/KDOX/'
-    outpath = './arrays'
-    scan_paths = glob.glob(scan_root + '*')
-    renderer = Renderer(outpath)
-    renderer.render(scan_paths)
+            rgb = rgb[::-1, :, :3]  # flip the y axis; omit the fourth alpha dimension, NAN are black but not white
+            image.imsave(os.path.join(self.imgdirs[(attr, elev)], key_prefix, f"{scan}.png"), rgb)
 
 
