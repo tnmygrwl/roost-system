@@ -25,47 +25,22 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
     roosts in them. The detection model path and the system output directory should be specified in the file.
 
 #### Installation and Preparation
-1. Create and activate a python 3.6 environment. 
-Install compatible [PyTorch](https://pytorch.org/get-started/previous-versions/) and OpenCV.
+1. Installation. Compatible PyTorch version can be found [here](https://pytorch.org/get-started/previous-versions/).
 For running detection with GPU, check the cuda version at, for example, `/usr/local/cuda`, or potentially by `nvcc -V`. 
     ```bash
     conda create -n roost2021 python=3.6
     conda activate roost2021
-    pip install torch==1.7.1+cpu torchvision==0.8.2+cpu torchaudio==0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
-    # pip install torch==1.7.1+cu101 torchvision==0.8.2+cu101 torchaudio==0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
-    pip install opencv-python
-    ```
-
-2. Install this repo and its dependencies. 
-    ```bash
+    pip install torch==1.7.1+cpu torchvision==0.8.2+cpu -f https://download.pytorch.org/whl/torch_stable.html
+    # pip install torch==1.7.1+cu101 torchvision==0.8.2+cu101 -f https://download.pytorch.org/whl/torch_stable.html
     git clone https://github.com/darkecology/roost-system.git
-    cd roost-system/libs
-    
-    # pywsrlib, commit 3690123 is tested
-    git clone https://github.com/darkecology/pywsrlib.git
-    pip install -e pywsrlib
-    
-    # detectron2, commit df6eac1 is tested
-    git clone https://github.com/darkecology/detectron2.git
-    pip install -e detectron2
-    
-    cd ..
     pip install -e .
-    ```
+   ```
 
-3. (Optional) [wsrdata](https://github.com/darkecology/wsrdata) is not needed for system deployment. 
-It is only for preparing new roost datasets with annotations to train and evaluate new models.
-    ```bash
-    # wsrdata, commit 7ac8005 is tested
-    # git clone https://github.com/darkecology/wsrdata.git
-    # pip install -e wsrdata
-    ``` 
-
-4. Download the trained detection checkpoint `entire_lr_0.001.pth` from 
+2. Download the trained detection checkpoint `entire_lr_0.001.pth` from 
 [here](https://www.dropbox.com/sh/g1m6406m6e087s6/AAAQyut5_ZF12zZ88tNiRzX-a?dl=0)
 and place it under **checkpoints**.
 
-5. [Configure AWS](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) by
+3. [Configure AWS](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) by
 `aws configure`
 in order to download radar scans. 
 Enter `AWS Access Key ID` and `AWS Secret Access Key` as prompted,

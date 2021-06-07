@@ -124,7 +124,7 @@ class Renderer:
             
             scan = os.path.splitext(os.path.basename(scan_file))[0]
             npz_path = os.path.join(npzdir, f"{scan}.npz")
-            ref1_path = os.path.join(self.ref_imgdir, f"{scan}.png")
+            ref1_path = os.path.join(ref_imgdir, f"{scan}.png")
 
             if os.path.exists(npz_path) and os.path.exists(ref1_path):
                 npz_files.append(npz_path)

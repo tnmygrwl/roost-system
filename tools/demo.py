@@ -39,9 +39,9 @@ roosts_ui_data_dir  = os.path.join(data_root, 'roosts_ui_data') # save files for
 downloader  = Downloader(min_before_sunrise=30, min_after_sunrise=90)
 downloader.set_request(request, scan_dir)
 renderer    = Renderer(npz_dir, roosts_ui_data_dir)
-# detector    = Detector(ckpt_path, use_gpu=True)
-# tracker     = Tracker()
-# visualizer  = Visualizer()
+detector    = Detector(ckpt_path, use_gpu=True)
+tracker     = Tracker()
+visualizer  = Visualizer()
 # postprocess = Postprocess(imsize=600,
 #                           geosize=300000,
 #                           geomode="large_y_is_north",
@@ -68,23 +68,23 @@ for day_idx, scan_paths in enumerate(downloader):
     """
 
     npz_files, img_files, scan_names = renderer.render(scan_paths)
-    # fileUtil.delete_files(scan_paths)
-    #
-    # if len(npz_files) == 0:
-    #     print()
-    #     print(f"---------------------- Day {day_idx+2} -----------------------\n")
-    #     continue
+    fileUtil.delete_files(scan_paths)
 
-    # ######################## (3) Run detection models on the data ############################
-    # detections = detector.run(npz_files)
-    #
-    # ######################## (4) Run tracking on the detections  ############################
-    # """
-    #     in some cases, the detector does not find any roosts,
-    #     therefore, we need "scan_names" (a name list of all scans) to let the tracker find some using tracking info
-    #     NMS over tracks is applied to remove duplicated tracks, not sure if it's useful with new detection model
-    # """
-    # tracked_detections, tracks = tracker.tracking(scan_names, copy.deepcopy(detections))
+    if len(npz_files) == 0:
+        print()
+        print(f"---------------------- Day {day_idx+2} -----------------------\n")
+        continue
+
+    ######################## (3) Run detection models on the data ############################
+    detections = detector.run(npz_files)
+
+    ######################## (4) Run tracking on the detections  ############################
+    """
+        in some cases, the detector does not find any roosts,
+        therefore, we need "scan_names" (a name list of all scans) to let the tracker find some using tracking info
+        NMS over tracks is applied to remove duplicated tracks, not sure if it's useful with new detection model
+    """
+    tracked_detections, tracks = tracker.tracking(scan_names, copy.deepcopy(detections))
     #
     # ######################## (5) Postprocessing  ############################
     # """
@@ -97,11 +97,13 @@ for day_idx, scan_paths in enumerate(downloader):
     #
     # ######################## (6) Visualize the detection and tracking results  ############################
     #
-    # gif_path1 = visualizer.draw_detections(img_files, copy.deepcopy(detections),
-    #                             vis_det_dir, score_thresh=0.000, save_gif=True)
+    # import pdb; pdb.set_trace()
+
+    gif_path1 = visualizer.draw_detections(img_files, copy.deepcopy(detections),
+                                vis_det_dir, score_thresh=0.000, save_gif=True)
     #
-    # gif_path2 = visualizer.draw_detections(img_files, copy.deepcopy(tracked_detections),
-    #                             vis_track_dir,  save_gif=True,  vis_track=True)
+    gif_path2 = visualizer.draw_detections(img_files, copy.deepcopy(tracked_detections),
+                                vis_track_dir,  save_gif=True,  vis_track=True)
     #
     # gif_path3 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
     #                             vis_cleaned_det_dir, score_thresh=0.000, save_gif=True)
@@ -110,8 +112,10 @@ for day_idx, scan_paths in enumerate(downloader):
     #                             vis_NMS_track_dir, save_gif=True, vis_track=True, vis_track_after_NMS=True)
     #
     # # generate a website file
-    # station_day = scan_names[0][:12]
+    station_day = scan_names[0][:12]
+    visualizer.generate_web_files(detections, tracks, os.path.join(roosts_ui_data_dir, f'{station_day}.txt'))
     # visualizer.generate_web_files(cleaned_detections, tracks, os.path.join(roosts_ui_data_dir, f'{station_day}.txt'))
+
     #
     #
     # print("Total time elapse: {}".format(time.time() - start_time))
