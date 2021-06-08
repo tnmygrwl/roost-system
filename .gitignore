@@ -1,5 +1,6 @@
 # Manual Additions
 experiments/experiments
+roosts_data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

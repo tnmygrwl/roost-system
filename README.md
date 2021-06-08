@@ -6,12 +6,12 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
 #### Under Development
 - [ ] log
 - [ ] dir structure, rsync results from swarm to doppler
-- [ ] image and bbox directions: utils/postprocess.py
+- [x] image and bbox directions: utils/postprocess.py
 - [ ] deployment: greatlake; scans with the old model; a year-station pair
 - [x] flip the image and coords
 - [x] double check the geographic coords
 - [x] double check the windfarm and rain
-- [ ] debug tracking algorithm
+- [x] debug tracking algorithm
 
 #### Repository Overview
 - **checkpoints** is for trained model checkpoints
@@ -54,6 +54,14 @@ Review the updated AWS config.
     vim ~/.aws/credentials
     vim ~/.aws/config
     ```
+
+#### Website visualization
+
+In the generated webfiles, the following information could be used to rank the tracks: 
+- track length
+- total/average detection scores (-1 represents the bbox is not from detector, instead, our tracking algorithm)
+- num of bbox identified as rain using dualpol data (is\_rain=1 means the bbox is occupied by the rain)
+- the minutes from sunrise of the first bbox in a track
 
 #### Reference
 [1] [Detecting and Tracking Communal Bird Roosts in Weather Radar Data.](https://people.cs.umass.edu/~zezhoucheng/roosts/radar-roosts-aaai20.pdf)

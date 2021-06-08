@@ -67,7 +67,7 @@ for day_idx, scan_paths in enumerate(downloader):
     """
 
     npz_files, img_files, scan_names = renderer.render(scan_paths)
-    # fileUtil.delete_files(scan_paths)
+    fileUtil.delete_files(scan_paths)
 
     if len(npz_files) == 0:
         print()
@@ -84,7 +84,7 @@ for day_idx, scan_paths in enumerate(downloader):
         NMS over tracks is applied to remove duplicated tracks, not sure if it's useful with new detection model
     """
     tracked_detections, tracks = tracker.tracking(scan_names, copy.deepcopy(detections))
-    #
+
     # ######################## (5) Postprocessing  ############################
     # """
     #     (1) convert image coordinates to geometric coordinates;
@@ -95,8 +95,6 @@ for day_idx, scan_paths in enumerate(downloader):
                                                           npz_files)
     #
     # ######################## (6) Visualize the detection and tracking results  ############################
-    #
-    # import pdb; pdb.set_trace()
 
     gif_path1 = visualizer.draw_detections(img_files, copy.deepcopy(detections),
                                 vis_det_dir, score_thresh=0.000, save_gif=True)
@@ -108,17 +106,12 @@ for day_idx, scan_paths in enumerate(downloader):
     #
     gif_path4 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
                                  vis_NMS_track_dir, save_gif=True, vis_track=True, vis_track_after_NMS=True)
-    #
-    # # generate a website file
+    
+    # generate a website file
     station_day = scan_names[0][:12]
-    # visualizer.generate_web_files(detections, tracks, os.path.join(roosts_ui_data_dir, f'{station_day}.txt'))
     visualizer.generate_web_files(cleaned_detections, tracks, os.path.join(roosts_ui_data_dir, f'{station_day}.txt'))
 
-    #
-    #
-    # print("Total time elapse: {}".format(time.time() - start_time))
-    #
-    # # import pdb; pdb.set_trace()
-    # print()
-    # print(f"-------------------- Day {day_idx+2} --------------------\n")
+    print("Total time elapse: {}".format(time.time() - start_time))
+    print()
+    print(f"-------------------- Day {day_idx+2} --------------------\n")
 

@@ -131,16 +131,23 @@ class Visualizer:
         fileUtil.mkdir(os.path.dirname(outpath))
         
         with open(outpath, 'w+') as f:
-            f.write('track_id, filename, from_sunrise, det_score, x, y, r, lon, lat, radius\n')
+            f.write('track_id, filename, from_sunrise, det_score, x, y, r, lon, lat, radius, is_rain\n')
             for track in tqdm(tracks, desc="Write tracks into csv"):
-                for det_ID in track["det_IDs"]:
+                # remove the tail of tracks (which are generated from Kalman filter instead of detector)
+                for idx in range(len(track["det_or_pred"])-1, -1, -1):
+                    if track["det_or_pred"][idx]:
+                        last_pred_idx = idx
+                        break
+                # do not report the tail of tracks
+                for idx, det_ID in enumerate(track["det_IDs"]):
+                    if idx > last_pred_idx:
+                        break
                     det = det_dict[det_ID]
                     if (("windfarm" in det.keys()) and det["windfarm"]):
                         continue
-                    if (("rain" in det.keys()) and det["rain"]):
-                        continue
-                    f.write('{:d},{:s},{:d},{:.3f},{:.2f},{:2f},{:2f},{:.2f},{:2f},{:2f}\n'.format(
+                    f.write('{:d},{:s},{:d},{:.3f},{:.2f},{:2f},{:2f},{:.2f},{:2f},{:2f},{:d}\n'.format(
                         det["track_ID"], det["scanname"], int(det["from_sunrise"]), 
                         det["det_score"], det["im_bbox"][0], det["im_bbox"][1], det["im_bbox"][2], 
-                        det["geo_bbox"][0], det["geo_bbox"][1], det["geo_bbox"][2]))
+                        det["geo_bbox"][0], det["geo_bbox"][1], det["geo_bbox"][2],
+                        det["rain"]))
 

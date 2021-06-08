@@ -20,6 +20,7 @@ class Tracker:
         dispersion_rate = 1.59 
         self.params = {
                         'radius_velocity': dispersion_rate * imsize / 600,
+                        'max_center_velocity': 3, #empirical max velocity of roost center per minute (unit=pixel) 
                         'R_multiplier': 100, # multiplier in covariance matrix of measurement formula
                         'Q_multiplier': 5, # multiplier in covariance matrix of state transition formula
                         'P_multiplier': 1, # multiplier in the initial error covariance matrix
@@ -155,7 +156,7 @@ class Tracker:
         # whether each of them are optimal or necessary, it works in practice anyway.
         # (1) the distance should be less than 3*time_interval 
         # (2) change in radius should be higher than 0.1 * radius, but less than 2.7 * time_interval
-        match_list = np.where(((center_dist < self.params['radius_velocity'] * t) &  # roost should not move too far
+        match_list = np.where(((center_dist < self.params['max_center_velocity'] * t) &  # roost should not move too far
                                (r_change <= self.params['radius_velocity'] * t)  & # roost should not expand too much
                                (r_change > -0.1 * r)))[0] # roost should not shrink too much
         if len(match_list) == 0: # no match found

@@ -115,7 +115,6 @@ class Postprocess():
         y = int(box[1])
         r = int(box[2])
 
-        import pdb; pdb.set_trace()
         # load dualpol
         dualpol_threshold = 0.95
         NAN, BIRD, RAIN = 1, 2, 3
