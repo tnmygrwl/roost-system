@@ -3,6 +3,7 @@ from setuptools import find_packages, setup
 install_requires = [
     "torch",            # install a compatible version of torch
     "opencv-python",    # 4.5.2.52
+    "gdown",
     ### data ###
     "pytz",             # time zone, 2021.1
     "ephem",            # 3.7.7.1

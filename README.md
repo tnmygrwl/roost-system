@@ -4,18 +4,17 @@ in weather surveillance radar data, continuing work by Cheng et al. [1].
 Roost detection is based on [Detectron2](https://github.com/darkecology/detectron2) using PyTorch.
 
 #### Under Development
-- [ ] log
-- [ ] dir structure, rsync results from swarm to doppler
-- [x] image and bbox directions: utils/postprocess.py
-- [ ] deployment: greatlake; scans with the old model; a year-station pair
+- [x] log
+- [x] dir structure
 - [x] flip the image and coords
 - [x] double check the geographic coords
 - [x] double check the windfarm and rain
 - [x] debug tracking algorithm
+- [ ] testing: greatlake; scans with the old model; a year-station pair
+- [ ] testing: cpu version on swarm, rsync results from swarm to doppler
 
 #### Repository Overview
 - **checkpoints** is for trained model checkpoints
-- **libs** is for external libraries and toolkits, e.g. detectron2, wsrlib, wsrdata
 - **src** is for system implementation
     - **data**
         - **downloader** downloads radar scans based on station and day
@@ -40,9 +39,10 @@ For running detection with GPU, check the cuda version at, for example, `/usr/lo
     pip install -e .
    ```
 
-2. Download the trained detection checkpoint `entire_lr_0.001.pth` from 
-[here](https://www.dropbox.com/sh/g1m6406m6e087s6/AAAQyut5_ZF12zZ88tNiRzX-a?dl=0)
-and place it under **checkpoints**.
+2. Under **checkpoints**, download a trained detection checkpoint.
+    ```bash
+    gdown --id 1MyZGkzfd939G4NjuQS4S2gFybqsYfwf6
+    ```
 
 3. [Configure AWS](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) by
 `aws configure`

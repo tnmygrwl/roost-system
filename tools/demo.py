@@ -9,6 +9,7 @@ import roosts.utils.file_util as fileUtil
 import copy
 import warnings
 warnings.filterwarnings("ignore")
+import logging
 import time
 import argparse
 
@@ -28,6 +29,7 @@ windfarm_database   = "../src/roosts/utils/uswtdb_v1_3_20190107.csv"
 data_root           = "../roosts_data"
 scan_dir            = os.path.join(data_root, 'scans')  # save raw scans downloaded from AWS
 npz_dir             = os.path.join(data_root, 'arrays') # npz files and rendered reflective/radio velocity
+log_root_dir        = os.path.join(data_root, 'logs')
 vis_det_dir         = os.path.join(data_root, 'vis_dets') # visualization of detections from detection model
 vis_cleaned_det_dir = os.path.join(data_root, 'vis_cleaned_dets') # visualization of detections after removing rain / windfarm
 vis_track_dir       = os.path.join(data_root, 'vis_tracks') # visualization of tracks
@@ -36,7 +38,7 @@ roosts_ui_data_dir  = os.path.join(data_root, 'roosts_ui_data') # save files for
 
 
 ######################## initialize models ############################
-downloader  = Downloader(min_before_sunrise=30, min_after_sunrise=90)
+downloader  = Downloader(min_before_sunrise=30, min_after_sunrise=90, log_dir=log_root_dir)
 downloader.set_request(request, scan_dir)
 renderer    = Renderer(npz_dir, roosts_ui_data_dir)
 detector    = Detector(ckpt_path, use_gpu=True)
@@ -52,12 +54,14 @@ postprocess = Postprocess(imsize=600,
 ######################## process radar data ############################
 print("Total number of days: %d" % len(downloader))
 print(f"---------------------- Day 1 -----------------------\n")
-for day_idx, scan_paths in enumerate(downloader):
-    start_time = time.time()
 
-    ######################## (1) Download data ############################
-    if type(scan_paths) not in (list,): break
+######################## (1) Download data ############################
+for day_idx, downloader_outputs in enumerate(downloader):
 
+    if downloader_outputs is StopIteration:
+        break
+    else:
+        scan_paths, start_time, key_prefix, log_path, logger = downloader_outputs
 
     ######################## (2) Render data ############################
     """
@@ -66,16 +70,18 @@ for day_idx, scan_paths in enumerate(downloader):
         scan_names: for tracking module to know the full image set
     """
 
-    npz_files, img_files, scan_names = renderer.render(scan_paths)
+    npz_files, img_files, scan_names = renderer.render(scan_paths, key_prefix, logger)
     fileUtil.delete_files(scan_paths)
 
     if len(npz_files) == 0:
         print()
-        print(f"---------------------- Day {day_idx+2} -----------------------\n")
+        if day_idx + 2 <= len(downloader):
+            print(f"---------------------- Day {day_idx + 2} -----------------------\n")
         continue
 
     ######################## (3) Run detection models on the data ############################
     detections = detector.run(npz_files)
+    logger.info(f'[Detection Done] {len(detections)} detections')
 
     ######################## (4) Run tracking on the detections  ############################
     """
@@ -84,6 +90,7 @@ for day_idx, scan_paths in enumerate(downloader):
         NMS over tracks is applied to remove duplicated tracks, not sure if it's useful with new detection model
     """
     tracked_detections, tracks = tracker.tracking(scan_names, copy.deepcopy(detections))
+    logger.info(f'[Tracking Done] {len(tracks)} tracks with {len(tracked_detections)} tracked detections')
 
     # ######################## (5) Postprocessing  ############################
     # """
@@ -93,9 +100,9 @@ for day_idx, scan_paths in enumerate(downloader):
     cleaned_detections = postprocess.annotate_detections(copy.deepcopy(tracked_detections),
                                                           copy.deepcopy(tracks),
                                                           npz_files)
-    #
-    # ######################## (6) Visualize the detection and tracking results  ############################
+    logger.info(f'[Postprocessing Done] {len(cleaned_detections)} cleaned detections')
 
+    ######################## (6) Visualize the detection and tracking results  ############################
     gif_path1 = visualizer.draw_detections(img_files, copy.deepcopy(detections),
                                 vis_det_dir, score_thresh=0.000, save_gif=True)
     # gif_path2 = visualizer.draw_detections(img_files, copy.deepcopy(tracked_detections),
@@ -111,7 +118,12 @@ for day_idx, scan_paths in enumerate(downloader):
     station_day = scan_names[0][:12]
     visualizer.generate_web_files(cleaned_detections, tracks, os.path.join(roosts_ui_data_dir, f'{station_day}.txt'))
 
-    print("Total time elapse: {}".format(time.time() - start_time))
+    end_time = time.time()
+    logger.info(f'[Finished] running the system on {station_day}; '
+                f'total time elapse: {end_time - start_time}')
+
+    print("Total time elapse: {}".format(end_time - start_time))
     print()
-    print(f"-------------------- Day {day_idx+2} --------------------\n")
+    if day_idx + 2 <= len(downloader):
+        print(f"-------------------- Day {day_idx + 2} --------------------\n")
 

@@ -88,13 +88,7 @@ class Renderer:
         self.dualpol_render_config = dualpol_render_config
 
 
-    def render(self, scan_paths):
-        scan = os.path.splitext(os.path.basename(scan_paths[0]))[0]
-        station = scan[0:4]
-        year = scan[4:8]
-        month = scan[8:10]
-        date = scan[10:12]
-        key_prefix = f"{year}/{month}/{date}/{station}"
+    def render(self, scan_paths, key_prefix, logger):
 
         npzdir = os.path.join(self.npzdir, key_prefix)
         ref_imgdir = os.path.join(self.ref_imgdir, key_prefix)
@@ -103,22 +97,9 @@ class Renderer:
         os.makedirs(ref_imgdir, exist_ok = True)
         os.makedirs(rv_imgdir, exist_ok = True)
 
-        log_path = os.path.join(npzdir, "rendering.log")
-        array_error_log_path = os.path.join(npzdir, "array_error_scans.log")
-        dualpol_error_log_path = os.path.join(npzdir, "dualpol_error_scans.log")
-        logger = logging.getLogger(key_prefix)
-        filelog = logging.FileHandler(log_path)
-        formatter = logging.Formatter('%(asctime)s : %(message)s')
-        formatter.converter = time.gmtime
-        filelog.setFormatter(formatter)
-        logger.setLevel(logging.DEBUG)
-        logger.addHandler(filelog)
-
         npz_files = [] # for detection module to load/preprocess data
         img_files = [] # for visualization
         scan_names = [] # for tracking module to know the full image set
-        array_errors = []  # to record scans from which array rendering fails
-        dualpol_errors = []  # to record scans from which dualpol array rendering fails
 
         for scan_file in tqdm(scan_paths, desc="Rendering"):
             
@@ -137,34 +118,23 @@ class Renderer:
 
             try:
                 radar = pyart.io.read_nexrad_archive(scan_file)
-                logger.info('Loaded scan %s' % scan)
             except Exception as ex:
-                logger.error('Exception while loading scan %s - %s' % (scan, str(ex)))
-                array_errors.append(scan)
-                dualpol_errors.append(scan)
+                logger.error('[Scan Loading Failure] scan %s - %s' % (scan, str(ex)))
                 continue
 
             try:
                 data, _, _, y, x = radar2mat(radar, **self.array_render_config)
-                logger.info('Rendered a npy array from scan %s' % scan)
-                if data.shape != (len(self.array_render_config["fields"]), len(self.array_render_config["elevs"]),
-                                  self.array_render_config["dim"], self.array_render_config["dim"]):
-                    logger.info(f"  Unexpectedly, its shape is {data.shape}.")
+                logger.info('[Array Rendering Success] scan %s' % scan)
                 arrays["array"] = data
             except Exception as ex:
-                logger.error('Exception while rendering a npy array from scan %s - %s' % (scan, str(ex)))
-                array_errors.append(scan)
+                logger.error('[Array Rendering Failure] scan %s - %s' % (scan, str(ex)))
 
             try:
                 data, _, _, y, x = radar2mat(radar, **self.dualpol_render_config)
-                logger.info('Rendered a dualpol npy array from scan %s' % scan)
-                if data.shape != (len(self.dualpol_render_config["fields"]), len(self.dualpol_render_config["elevs"]),
-                                  self.dualpol_render_config["dim"], self.dualpol_render_config["dim"]):
-                    logger.info(f"  Unexpectedly, its shape is {data.shape}.")
+                logger.info('[Dualpol Rendering Success] scan %s' % scan)
                 arrays["dualpol_array"] = data
             except Exception as ex:
-                logger.error('Exception while rendering a dualpol npy array from scan %s - %s' % (scan, str(ex)))
-                dualpol_errors.append(scan)
+                logger.error('[Dualpol Rendering Failure] scan %s - %s' % (scan, str(ex)))
 
             if len(arrays) > 0:
                 np.savez_compressed(npz_path, **arrays)
@@ -173,15 +143,7 @@ class Renderer:
                 img_files.append(ref1_path)
                 scan_names.append(scan)
 
-        if len(array_errors) > 0:
-            with open(array_error_log_path, 'a+') as f:
-                f.write('\n'.join(array_errors) + '\n')
-        if len(dualpol_errors) > 0:
-            with open(dualpol_error_log_path, 'a+') as f:
-                f.write('\n'.join(dualpol_errors) + '\n')
-
-        del logger
-        return npz_files, img_files, scan_names 
+        return npz_files, img_files, scan_names
 
 
     def render_img(self, array, key_prefix, scan):

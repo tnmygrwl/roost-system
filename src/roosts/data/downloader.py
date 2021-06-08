@@ -1,6 +1,7 @@
 import os
 import pytz
 import logging
+import time
 from datetime import datetime, timedelta
 from botocore.exceptions import ClientError
 from roosts.utils.sunrise_util import get_sunrise_time
@@ -40,9 +41,10 @@ class Downloader:
         in a daily basis. Station-day is the minimum unit of tracking roosts.
     """
 
-    def __init__(self, min_before_sunrise=30, min_after_sunrise=90):
+    def __init__(self, min_before_sunrise, min_after_sunrise, log_dir):
         self.min_before_sunrise = min_before_sunrise
         self.min_after_sunrise = min_after_sunrise
+        self.log_dir = log_dir
 
 
     def set_request(self, request, outdir):
@@ -58,13 +60,7 @@ class Downloader:
 
         # scan path
         self.outdir = outdir
-        self.log_dir = os.path.join(outdir, 'logs')
-        self.not_s3_log_dir = os.path.join(outdir, 'not_s3_logs')
-        self.error_scans_log_dir = os.path.join(outdir, 'error_scans_logs')
         os.makedirs(self.outdir, exist_ok = True)
-        os.makedirs(self.log_dir, exist_ok = True)
-        os.makedirs(self.not_s3_log_dir, exist_ok = True)
-        os.makedirs(self.error_scans_log_dir, exist_ok = True)
 
 
     def __iter__(self):
@@ -76,51 +72,45 @@ class Downloader:
 
 
     def __next__(self):
+        start_time = time.time()
         if self.index == self.num_days:
             return StopIteration
-        scan_paths = self.download_scans(self.days[self.index])
+        scan_paths, key_prefix, log_path, logger = self.download_scans(self.days[self.index])
         self.index = self.index + 1
-        return scan_paths
+        return scan_paths, start_time, key_prefix, log_path, logger
 
 
     def download_scans(self, current_date):
         """ Download radar scans from AWS """
-        current_date_str = current_date.strftime('%Y-%m-%d')
         scan_paths = [] # list of the file path of downloaded scans
 
-        def log_success(scan):
-            with open(os.path.join(self.log_dir, f"{self.station}_{current_date_str}.log"), 'a+') as f:
-                f.write(scan + '\n')
-
-        def log_not_s3(scan):
-            with open(os.path.join(self.not_s3_log_dir, f"{self.station}_{current_date_str}.log"), 'a+') as f:
-                f.write(scan + '\n')
-
-        def log_error_scans(scan):
-            with open(os.path.join(self.error_scans_log_dir, f"{self.station}_{current_date_str}.log"), 'a+') as f:
-                f.write(scan + '\n')
+        key_prefix = os.path.join(current_date.strftime('%Y/%m/%d'), self.station)
+        log_dir = os.path.join(self.log_dir, self.station)
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, f"{self.station}_{current_date.strftime('%Y%m%d')}.log")
+        logger = logging.getLogger(key_prefix)
+        filelog = logging.FileHandler(log_path)
+        formatter = logging.Formatter('%(asctime)s : %(message)s')
+        formatter.converter = time.gmtime
+        filelog.setFormatter(formatter)
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(filelog)
 
         sunrise = get_sunrise_time(self.station, current_date)
         start_time = sunrise - timedelta(minutes=self.min_before_sunrise)
         end_time = sunrise + timedelta(minutes=self.min_after_sunrise)
 
         keys = get_station_day_scan_keys(start_time, end_time, self.station)
-        keys = set(keys) # aws keys
+        keys = sorted(list(set(keys))) # aws keys
         for key in tqdm(keys, desc="Downloading"):
             try:
                 filepath = download_scans([key], self.outdir)
                 scan_paths.append(filepath)
-                log_success(key)
-            except ClientError as err:
-                error_code = int(err.response['Error']['Code'])
-                if error_code == 404:
-                    log_not_s3(key)
-                else:
-                    log_error_scans(key)
+                logger.info('[Download Success] scan %s' % key)
             except Exception as ex:
-                log_error_scans(key)
+                logger.error('[Download Failure] scan %s - %s' % (key, str(ex)))
 
-        return scan_paths
+        return scan_paths, key_prefix, log_path, logger
 
 
 if __name__ == "__main__":
