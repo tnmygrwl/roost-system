@@ -28,14 +28,17 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
     roosts in them. The detection model path and the system output directory should be specified in the file.
 
 #### Installation and Preparation
-1. Installation. Compatible PyTorch version can be found [here](https://pytorch.org/get-started/previous-versions/).
+1. Installation. Compatible PyTorch version can be found [here](https://pytorch.org/get-started/previous-versions/) 
+and [here](https://download.pytorch.org/whl/torch_stable.html).
 For running detection with GPU, check the cuda version at, for example, `/usr/local/cuda`, or potentially by `nvcc -V`. 
     ```bash
     conda create -n roost2021 python=3.6
     conda activate roost2021
     pip install torch==1.7.1+cpu torchvision==0.8.2+cpu -f https://download.pytorch.org/whl/torch_stable.html
+    # pip install torch==1.7.1 torchvision==0.8.2 -f https://download.pytorch.org/whl/torch_stable.html
     # pip install torch==1.7.1+cu101 torchvision==0.8.2+cu101 -f https://download.pytorch.org/whl/torch_stable.html
     git clone https://github.com/darkecology/roost-system.git
+    cd roost-system
     pip install -e .
    ```
 
