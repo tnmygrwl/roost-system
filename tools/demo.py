@@ -42,12 +42,11 @@ renderer    = Renderer(npz_dir, roosts_ui_data_dir)
 detector    = Detector(ckpt_path, use_gpu=True)
 tracker     = Tracker()
 visualizer  = Visualizer()
-# postprocess = Postprocess(imsize=600,
-#                           geosize=300000,
-#                           geomode="large_y_is_north",
-#                           windfarm_database=windfarm_database,
-#                           clean_windfarm=True,
-#                           clean_rain=True)
+postprocess = Postprocess(imsize=600,
+                           geosize=300000,
+                           windfarm_database=windfarm_database,
+                           clean_windfarm=True,
+                           clean_rain=True)
 
 
 ######################## process radar data ############################
@@ -68,7 +67,7 @@ for day_idx, scan_paths in enumerate(downloader):
     """
 
     npz_files, img_files, scan_names = renderer.render(scan_paths)
-    fileUtil.delete_files(scan_paths)
+    # fileUtil.delete_files(scan_paths)
 
     if len(npz_files) == 0:
         print()
@@ -91,9 +90,9 @@ for day_idx, scan_paths in enumerate(downloader):
     #     (1) convert image coordinates to geometric coordinates;
     #     (2) clean up the false positives due to windfarm and rain using auxiliary information
     # """
-    # cleaned_detections = postprocess.annotate_detections(copy.deepcopy(tracked_detections),
-    #                                                      copy.deepcopy(tracks),
-    #                                                      npz_files)
+    cleaned_detections = postprocess.annotate_detections(copy.deepcopy(tracked_detections),
+                                                          copy.deepcopy(tracks),
+                                                          npz_files)
     #
     # ######################## (6) Visualize the detection and tracking results  ############################
     #
@@ -101,20 +100,19 @@ for day_idx, scan_paths in enumerate(downloader):
 
     gif_path1 = visualizer.draw_detections(img_files, copy.deepcopy(detections),
                                 vis_det_dir, score_thresh=0.000, save_gif=True)
-    #
-    gif_path2 = visualizer.draw_detections(img_files, copy.deepcopy(tracked_detections),
-                                vis_track_dir,  save_gif=True,  vis_track=True)
+    # gif_path2 = visualizer.draw_detections(img_files, copy.deepcopy(tracked_detections),
+    #                            vis_track_dir,  save_gif=True,  vis_track=True)
     #
     # gif_path3 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
     #                             vis_cleaned_det_dir, score_thresh=0.000, save_gif=True)
     #
-    # gif_path4 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
-    #                             vis_NMS_track_dir, save_gif=True, vis_track=True, vis_track_after_NMS=True)
+    gif_path4 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
+                                 vis_NMS_track_dir, save_gif=True, vis_track=True, vis_track_after_NMS=True)
     #
     # # generate a website file
     station_day = scan_names[0][:12]
-    visualizer.generate_web_files(detections, tracks, os.path.join(roosts_ui_data_dir, f'{station_day}.txt'))
-    # visualizer.generate_web_files(cleaned_detections, tracks, os.path.join(roosts_ui_data_dir, f'{station_day}.txt'))
+    # visualizer.generate_web_files(detections, tracks, os.path.join(roosts_ui_data_dir, f'{station_day}.txt'))
+    visualizer.generate_web_files(cleaned_detections, tracks, os.path.join(roosts_ui_data_dir, f'{station_day}.txt'))
 
     #
     #

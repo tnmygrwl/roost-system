@@ -1,10 +1,7 @@
-# https://github.com/darkecology/cajun/blob/master/aws/sunset_util.py commit 7863f13
-
 import ephem
 from datetime import datetime
 import pytz
 from roosts.utils.nexrad_util import NEXRAD_LOCATIONS
-
 
 def get_sunrise_time(station, input_daytime, silent=True):
     # Make an observer

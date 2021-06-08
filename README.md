@@ -8,6 +8,10 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
 - [ ] dir structure, rsync results from swarm to doppler
 - [ ] image and bbox directions: utils/postprocess.py
 - [ ] deployment: greatlake; scans with the old model; a year-station pair
+- [x] flip the image and coords
+- [x] double check the geographic coords
+- [x] double check the windfarm and rain
+- [ ] debug tracking algorithm
 
 #### Repository Overview
 - **checkpoints** is for trained model checkpoints

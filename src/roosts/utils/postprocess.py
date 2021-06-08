@@ -16,7 +16,6 @@ class Postprocess():
     def __init__(self, 
                  imsize = 600, 
                  geosize = 300000, # by default, the image size represents 300km
-                 geomode = "large_y_is_north",
                  windfarm_database = "", # the path of windfarm database
                  clean_windfarm = True,
                  clean_rain = True,
@@ -24,7 +23,6 @@ class Postprocess():
 
         self.imsize = imsize
         self.geosize = geosize
-        self.geomode = geomode
         self.clean_windfarm = clean_windfarm
         self.clean_rain = clean_rain
         
@@ -37,13 +35,12 @@ class Postprocess():
         for det in detections:
             roost_xy = det["im_bbox"][:2] # image coordinate of roost center
             # the following step is critical to get correct geographic coordinates
-            if self.geomode is "large_y_is_north": roost_xy[1] = self.imsize - roost_xy[1]
             station_xy = (self.imsize / 2., self.imsize / 2.) # image coordinate of radar station
             station_name = det["scanname"][:4]
-            roost_lon, roost_lat = get_roost_coor(roost_xy, station_xy, station_name)
-            geo_radius = det["im_bbox"][2] * (self.geosize / self.imsize) 
+            distance_per_pixel = self.geosize / self.imsize
+            roost_lon, roost_lat = get_roost_coor(roost_xy, station_xy, station_name, distance_per_pixel)
+            geo_radius = det["im_bbox"][2] * distance_per_pixel
             det["geo_bbox"] = [roost_lon, roost_lat, geo_radius]
-            if self.geomode is "large_y_is_north": roost_xy[1] = self.imsize - roost_xy[1] # recover y 
         return detections
 
     def add_sunrise_time(self, detections):
@@ -118,6 +115,7 @@ class Postprocess():
         y = int(box[1])
         r = int(box[2])
 
+        import pdb; pdb.set_trace()
         # load dualpol
         dualpol_threshold = 0.95
         NAN, BIRD, RAIN = 1, 2, 3
@@ -180,6 +178,7 @@ class Postprocess():
                 radar_data = np.load(npz_file)
                 if "dualpol_array" in radar_data.files:
                     dualpol = radar_data["dualpol_array"]
+                    dualpol = dualpol[:, :, ::-1, :] # flip the array 
                     det["rain"] = self._is_there_rain(bbox, dualpol)
                 else:
                     det["rain"] = False

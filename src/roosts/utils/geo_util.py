@@ -3,6 +3,7 @@ from geopy import distance
 import numpy as np
 from roosts.utils.sunrise_util import get_sunrise_time
 from roosts.utils.nexrad_util import NEXRAD_LOCATIONS
+from datetime import datetime
 
 def euclid_distance(p, q):
     return np.sqrt(np.sum((p - q) * (p - q), axis = 1))
@@ -18,10 +19,10 @@ def geo_dist_km(coor1, coor2):
 
 def sunrise_time(radar_name):
     station = radar_name[:4]
-    year = radar_name[4:8]
-    month = radar_name[8:10]
-    day = radar_name[10:12]
-    date = '{:s}-{:s}-{:s}'.format(year, month, day)
+    year = int(radar_name[4:8])
+    month = int(radar_name[8:10])
+    day = int(radar_name[10:12])
+    date = datetime(year, month, day, 18, 0)
     rising_time = get_sunrise_time(station, date)
     rising_time = rising_time.minute + rising_time.hour * 60.
     return rising_time
@@ -39,7 +40,7 @@ def pol2cmp(angle):
     bearing = np.mod(bearing, 360)
     return bearing 
 
-def get_roost_coor(roost_xy, station_xy, station_name):
+def get_roost_coor(roost_xy, station_xy, station_name, distance_per_pixel):
     """ 
         Convert from image coordinates to geographic coordinates
 
@@ -47,14 +48,15 @@ def get_roost_coor(roost_xy, station_xy, station_name):
             roost_xy: image coordinates of roost center
             station_xy: image coordinates of station 
             station_name: name of station, e.g., KDOX
+            distance_per_pixel: geographic distance per pixel, unit: meter
 
         Return:
             longitude, latitide of roost center
     """
     station_lat, station_lon = NEXRAD_LOCATIONS[station_name]["lat"], NEXRAD_LOCATIONS[station_name]["lon"]
-    angle, dis = cart2pol(roost_xy[0]-station_xy[0], roost_xy[1]-station_xy[1])
+    angle, dis = cart2pol(roost_xy[0]-station_xy[0], -roost_xy[1]+station_xy[1])
     bearing = pol2cmp(angle)
     origin = geopy.Point(station_lat, station_lon)
-    des = distance.distance(kilometers=dis / 1000.).destination(origin, bearing) 
+    des = distance.distance(kilometers=dis * distance_per_pixel/ 1000.).destination(origin, bearing) 
     return des[1], des[0] # in order of lon and lat
 

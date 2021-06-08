@@ -72,7 +72,9 @@ class Detector:
             if len(scores) == 0: # no roost detected in this scan
                 continue
             bbox       = prediction.pred_boxes.tensor.cpu().numpy()
+            H, W       = prediction.image_size
             centers    = prediction.pred_boxes.get_centers().cpu().numpy()
+            centers[:, 1] = H - centers[:, 1] # flip the y direction
             radius     = ((bbox[:, 2] - bbox[:, 0]) + (bbox[:, 3] - bbox[:, 1])) / 4.
             radius     = radius[:, np.newaxis]
             bbox_xyr   = np.hstack((centers, radius))
