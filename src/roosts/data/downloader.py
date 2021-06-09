@@ -106,9 +106,9 @@ class Downloader:
             try:
                 filepath = download_scans([key], self.outdir)
                 scan_paths.append(filepath)
-                logger.info('[Download Success] scan %s' % key)
+                logger.info('[Download Success] scan %s' % key.split("/")[-1])
             except Exception as ex:
-                logger.error('[Download Failure] scan %s - %s' % (key, str(ex)))
+                logger.error('[Download Failure] scan %s - %s' % (key.split("/")[-1], str(ex)))
 
         return scan_paths, key_prefix, log_path, logger
 

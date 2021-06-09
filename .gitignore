@@ -1,5 +1,6 @@
 # Manual Additions
 roosts_data/
+tools/slurm/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

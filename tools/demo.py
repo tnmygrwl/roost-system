@@ -1,4 +1,5 @@
 import os
+import torch.cuda
 from roosts.data.downloader import Downloader
 from roosts.data.renderer import Renderer
 from roosts.detection.detector import Detector
@@ -17,6 +18,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--station', type=str, required=True, help="a single station name, eg. KDOX")
 parser.add_argument('--start', type=str, required=True, help="the first day to process, eg. 20101001")
 parser.add_argument('--end', type=str, required=True, help="the last day to process, eg. 20101001")
+parser.add_argument('--ckpt_path', type=str,
+                    default="/home/wenlongzhao/roost-system/checkpoints/entire_lr_0.001.pth")
+parser.add_argument('--data_root', type=str,
+                    default="/mnt/nfs/scratch1/wenlongzhao/roosts_data")
+parser.add_argument('--windfarm_database', type=str,
+                    default="/home/wenlongzhao/roost-system/src/roosts/utils/uswtdb_v1_3_20190107.csv")
 args = parser.parse_args()
 
 ######################## define station and date ############################
@@ -24,29 +31,26 @@ request = {"station": args.station, "date": (args.start, args.end)}
 
 
 ######################## paths and directories ############################
-ckpt_path           = "../checkpoints/entire_lr_0.001.pth"
-windfarm_database   = "../src/roosts/utils/uswtdb_v1_3_20190107.csv"
-data_root           = "../roosts_data"
-scan_dir            = os.path.join(data_root, 'scans')  # save raw scans downloaded from AWS
-npz_dir             = os.path.join(data_root, 'arrays') # npz files and rendered reflective/radio velocity
-log_root_dir        = os.path.join(data_root, 'logs')
-vis_det_dir         = os.path.join(data_root, 'vis_dets') # visualization of detections from detection model
-vis_cleaned_det_dir = os.path.join(data_root, 'vis_cleaned_dets') # visualization of detections after removing rain / windfarm
-vis_track_dir       = os.path.join(data_root, 'vis_tracks') # visualization of tracks
-vis_NMS_track_dir   = os.path.join(data_root, 'vis_NMS_tracks') # visualization of tracks after NMS
-roosts_ui_data_dir  = os.path.join(data_root, 'roosts_ui_data') # save files for website ui visualization
+scan_dir            = os.path.join(args.data_root, 'scans')  # save raw scans downloaded from AWS
+npz_dir             = os.path.join(args.data_root, 'arrays') # npz files and rendered reflective/radio velocity
+log_root_dir        = os.path.join(args.data_root, 'logs')
+vis_det_dir         = os.path.join(args.data_root, 'vis_dets') # visualization of detections from detection model
+vis_cleaned_det_dir = os.path.join(args.data_root, 'vis_cleaned_dets') # visualization of detections after removing rain / windfarm
+vis_track_dir       = os.path.join(args.data_root, 'vis_tracks') # visualization of tracks
+vis_NMS_track_dir   = os.path.join(args.data_root, 'vis_NMS_tracks') # visualization of tracks after NMS
+roosts_ui_data_dir  = os.path.join(args.data_root, 'roosts_ui_data') # save files for website ui visualization
 
 
 ######################## initialize models ############################
 downloader  = Downloader(min_before_sunrise=30, min_after_sunrise=90, log_dir=log_root_dir)
 downloader.set_request(request, scan_dir)
 renderer    = Renderer(npz_dir, roosts_ui_data_dir)
-detector    = Detector(ckpt_path, use_gpu=True)
+detector    = Detector(args.ckpt_path, use_gpu=torch.cuda.is_available())
 tracker     = Tracker()
 visualizer  = Visualizer()
 postprocess = Postprocess(imsize=600,
                            geosize=300000,
-                           windfarm_database=windfarm_database,
+                           windfarm_database=args.windfarm_database,
                            clean_windfarm=True,
                            clean_rain=True)
 
@@ -105,6 +109,7 @@ for day_idx, downloader_outputs in enumerate(downloader):
     ######################## (6) Visualize the detection and tracking results  ############################
     gif_path1 = visualizer.draw_detections(img_files, copy.deepcopy(detections),
                                 vis_det_dir, score_thresh=0.000, save_gif=True)
+
     # gif_path2 = visualizer.draw_detections(img_files, copy.deepcopy(tracked_detections),
     #                            vis_track_dir,  save_gif=True,  vis_track=True)
     #
@@ -116,7 +121,8 @@ for day_idx, downloader_outputs in enumerate(downloader):
     
     # generate a website file
     station_day = scan_names[0][:12]
-    visualizer.generate_web_files(cleaned_detections, tracks, os.path.join(roosts_ui_data_dir, f'{station_day}.txt'))
+    visualizer.generate_web_files(cleaned_detections, tracks,
+                                  os.path.join(roosts_ui_data_dir, "annotations", args.station, f'{station_day}.txt'))
 
     end_time = time.time()
     logger.info(f'[Finished] running the system on {station_day}; '

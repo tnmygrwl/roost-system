@@ -24,9 +24,10 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
     - **tracking**
     - **utils** contains various utils, scripts to postprocess roost tracks, and scripts to generate visualization
 - **tools** is for system deployment
-    - **demo.py** is a modifiable template for downloading radar scans, rendering arrays, and detecting and tracking 
-    roosts in them. The detection model path and the system output directory should be specified in the file.
-
+    - **demo.py** downloads radar scans, renders arrays, detects and tracks 
+    roosts in them, and postprocesses the results. 
+    - **launch_demo.py** is a modifiable template that submits **demo.sbatch** to servers with slurm management.
+    
 #### Installation and Preparation
 1. Installation. Compatible PyTorch version can be found [here](https://pytorch.org/get-started/previous-versions/) 
 and [here](https://download.pytorch.org/whl/torch_stable.html).
@@ -58,7 +59,26 @@ Review the updated AWS config.
     vim ~/.aws/config
     ```
 
-#### Website visualization
+4. (Optional) Jupyter.
+- Install jupyter: `pip install jupyter`
+- Add the python environment to jupyter:
+    ```bash
+    conda install -c anaconda ipykernel
+    python -m ipykernel install --user --name=roost2021
+    ```
+- To check which environments are in jupyter as kernels and to delete one:
+    ```bash
+    jupyter kernelspec list
+    jupyter kernelspec uninstall roost2021
+    ```
+- Run jupyter notebook on a server: `jupyter notebook --no-browser --port=9991`
+- Monitor from local: `ssh -N -f -L localhost:9990:localhost:9991 username@server`
+- Enter `localhost:9990` from a local browser tab
+
+#### Run Inference
+
+
+#### Website Visualization
 
 In the generated webfiles, the following information could be used to rank the tracks: 
 - track length
