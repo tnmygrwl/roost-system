@@ -7,6 +7,10 @@ from sklearn.neighbors import NearestNeighbors
 from roosts.utils.geo_util import geo_dist_km, get_roost_coor, sunrise_time
 from tqdm import tqdm
 
+import importlib_resources as pkg_resources
+
+
+
 class Postprocess():
     """ 
         Remove the false positives including wind farm and rain
@@ -16,7 +20,7 @@ class Postprocess():
     def __init__(self, 
                  imsize = 600, 
                  geosize = 300000, # by default, the image size represents 300km
-                 windfarm_database = "", # the path of windfarm database
+                 #windfarm_database = "", # the path of windfarm database
                  clean_windfarm = True,
                  clean_rain = True,
                  ): # this means large y coordinate indicate the North
@@ -27,6 +31,8 @@ class Postprocess():
         self.clean_rain = clean_rain
         
         if self.clean_windfarm:
+            here = os.path.dirname(os.path.realpath(__file__))
+            windfarm_database = os.path.join(here, "uswtdb_v1_3_20190107.csv")
             self.windfarm_ball_tree = self._build_ball_tree(windfarm_database)
 
 
