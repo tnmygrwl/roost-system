@@ -76,7 +76,7 @@ Review the updated AWS config.
 - Enter `localhost:9990` from a local browser tab
 
 #### Run Inference
-
+In **tools**, modify **launch_demo.py** and run `python launch_demo.py`.
 
 #### Website Visualization
 

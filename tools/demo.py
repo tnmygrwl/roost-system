@@ -107,17 +107,17 @@ for day_idx, downloader_outputs in enumerate(downloader):
     logger.info(f'[Postprocessing Done] {len(cleaned_detections)} cleaned detections')
 
     ######################## (6) Visualize the detection and tracking results  ############################
-    gif_path1 = visualizer.draw_detections(img_files, copy.deepcopy(detections),
-                                vis_det_dir, score_thresh=0.000, save_gif=True)
-
+    # gif_path1 = visualizer.draw_detections(img_files, copy.deepcopy(detections),
+    #                             vis_det_dir, score_thresh=0.000, save_gif=True)
+    #
     # gif_path2 = visualizer.draw_detections(img_files, copy.deepcopy(tracked_detections),
     #                            vis_track_dir,  save_gif=True,  vis_track=True)
     #
     # gif_path3 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
     #                             vis_cleaned_det_dir, score_thresh=0.000, save_gif=True)
     #
-    gif_path4 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
-                                 vis_NMS_track_dir, save_gif=True, vis_track=True, vis_track_after_NMS=True)
+    # gif_path4 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
+    #                              vis_NMS_track_dir, save_gif=True, vis_track=True, vis_track_after_NMS=True)
     
     # generate a website file
     station_day = scan_names[0][:12]
