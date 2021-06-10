@@ -14,16 +14,17 @@ import logging
 import time
 import argparse
 
+here = os.path.dirname(os.path.realpath(__file__))
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--station', type=str, required=True, help="a single station name, eg. KDOX")
 parser.add_argument('--start', type=str, required=True, help="the first day to process, eg. 20101001")
 parser.add_argument('--end', type=str, required=True, help="the last day to process, eg. 20101001")
 parser.add_argument('--ckpt_path', type=str,
-                    default="/home/wenlongzhao/roost-system/checkpoints/entire_lr_0.001.pth")
+                    default=f"{here}/../checkpoints/entire_lr_0.001.pth")
 parser.add_argument('--data_root', type=str,
-                    default="/mnt/nfs/scratch1/wenlongzhao/roosts_data")
-parser.add_argument('--windfarm_database', type=str,
-                    default="/home/wenlongzhao/roost-system/src/roosts/utils/uswtdb_v1_3_20190107.csv")
+                    default=f"{here}/../roosts_data")
 args = parser.parse_args()
 
 ######################## define station and date ############################
@@ -41,7 +42,7 @@ vis_NMS_track_dir   = os.path.join(args.data_root, 'vis_NMS_tracks') # visualiza
 roosts_ui_data_dir  = os.path.join(args.data_root, 'roosts_ui_data') # save files for website ui visualization
 
 
-######################## initialize models ############################
+######################## Initialize models ############################
 downloader  = Downloader(min_before_sunrise=30, min_after_sunrise=90, log_dir=log_root_dir)
 downloader.set_request(request, scan_dir)
 renderer    = Renderer(npz_dir, roosts_ui_data_dir)
@@ -50,7 +51,6 @@ tracker     = Tracker()
 visualizer  = Visualizer()
 postprocess = Postprocess(imsize=600,
                            geosize=300000,
-                           windfarm_database=args.windfarm_database,
                            clean_windfarm=True,
                            clean_rain=True)
 
