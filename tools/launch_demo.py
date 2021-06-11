@@ -4,7 +4,7 @@ import time
 
 NUM_CPUS = 7
 # station, start date (inclusive), end date (inclusive)
-# ARGS = [("KTYX", "20160803", "20160803")]
+# ARGS = [("KTYX", "20160803", "20160804")]
 ARGS = [
     ("KBUF", "20100201", "20100331"),
     ("KBUF", "20100801", "20100930"),

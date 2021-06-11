@@ -122,15 +122,21 @@ class Visualizer:
         imageio.mimsave(outpath, seq, "GIF", **kargs)
             
 
-    def generate_web_files(self, detections, tracks, outpath):
+    def generate_web_files(self, detections, tracks, outpath, n_existing_tracks):
         
         det_dict = {}
         for det in detections:
             det_dict[det["det_ID"]] = det
-        
-        with open(outpath, 'w+') as f:
-            f.write('track_id,filename,from_sunrise,det_score,x,y,r,lon,lat,radius,is_rain\n')
+
+        if not os.path.exists(outpath):
+            with open(outpath, 'w+') as f:
+                f.write('track_id,filename,from_sunrise,det_score,x,y,r,lon,lat,radius,is_rain\n')
+                assert n_existing_tracks == 0
+
+        with open(outpath, 'a+') as f:
+            n_tracks = 0
             for track in tqdm(tracks, desc="Write tracks into csv"):
+                saved_track = False
                 # remove the tail of tracks (which are generated from Kalman filter instead of detector)
                 for idx in range(len(track["det_or_pred"])-1, -1, -1):
                     if track["det_or_pred"][idx]:
@@ -144,8 +150,12 @@ class Visualizer:
                     if (("windfarm" in det.keys()) and det["windfarm"]):
                         continue
                     f.write('{:d},{:s},{:d},{:.3f},{:.2f},{:2f},{:2f},{:.2f},{:2f},{:2f},{:d}\n'.format(
-                        det["track_ID"], det["scanname"], int(det["from_sunrise"]), 
+                        det["track_ID"]+n_existing_tracks, det["scanname"], int(det["from_sunrise"]),
                         det["det_score"], det["im_bbox"][0], det["im_bbox"][1], det["im_bbox"][2], 
                         det["geo_bbox"][0], det["geo_bbox"][1], det["geo_bbox"][2],
                         det["rain"]))
+                    saved_track = True
+                if saved_track:
+                    n_tracks += 1
 
+        return n_existing_tracks + n_tracks

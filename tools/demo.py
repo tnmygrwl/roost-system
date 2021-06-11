@@ -56,6 +56,7 @@ postprocess = Postprocess(imsize=600,
                            geosize=300000,
                            clean_windfarm=True,
                            clean_rain=True)
+n_existing_tracks = 0
 
 
 ######################## process radar data ############################
@@ -82,7 +83,7 @@ for day_idx, downloader_outputs in enumerate(downloader):
 
     with open(os.path.join(
             scan_and_track_dir, f'scans_{args.station}_{args.start}_{args.end}.txt'
-    ), "w") as f:
+    ), "a+") as f:
         f.writelines([scan_name + "\n" for scan_name in scan_names])
 
     if len(npz_files) == 0:
@@ -115,23 +116,29 @@ for day_idx, downloader_outputs in enumerate(downloader):
     logger.info(f'[Postprocessing Done] {len(cleaned_detections)} cleaned detections')
 
     ######################## (6) Visualize the detection and tracking results  ############################
-    gif_path1 = visualizer.draw_detections(img_files, copy.deepcopy(detections),
-                                vis_det_dir, score_thresh=0.000, save_gif=True)
+    gif_path1 = visualizer.draw_detections(
+        img_files, copy.deepcopy(detections), os.path.join(vis_det_dir, args.station),
+        score_thresh=0.000, save_gif=True
+    )
     #
     # gif_path2 = visualizer.draw_detections(img_files, copy.deepcopy(tracked_detections),
-    #                            vis_track_dir,  save_gif=True,  vis_track=True)
+    #                            os.path.join(vis_track_dir, args.station),  save_gif=True,  vis_track=True)
     #
     # gif_path3 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
-    #                             vis_cleaned_det_dir, score_thresh=0.000, save_gif=True)
+    #                             os.path.join(vis_cleaned_det_dir, args.station), score_thresh=0.000, save_gif=True)
     #
-    gif_path4 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
-                                 vis_NMS_track_dir, save_gif=True, vis_track=True, vis_track_after_NMS=True)
+    gif_path4 = visualizer.draw_detections(
+        img_files, copy.deepcopy(cleaned_detections), os.path.join(vis_NMS_track_dir, args.station),
+        save_gif=True, vis_track=True, vis_track_after_NMS=True
+    )
     
     # generate a website file
     station_day = scan_names[0][:12]
-    visualizer.generate_web_files(cleaned_detections, tracks, os.path.join(
-        scan_and_track_dir, f'tracks_{args.station}_{args.start}_{args.end}.txt'
-    ))
+    n_existing_tracks = visualizer.generate_web_files(
+        cleaned_detections, tracks, os.path.join(
+            scan_and_track_dir, f'tracks_{args.station}_{args.start}_{args.end}.txt'
+        ), n_existing_tracks=n_existing_tracks
+    )
 
     end_time = time.time()
     logger.info(f'[Finished] running the system on {station_day}; '
