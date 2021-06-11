@@ -128,10 +128,8 @@ class Visualizer:
         for det in detections:
             det_dict[det["det_ID"]] = det
         
-        fileUtil.mkdir(os.path.dirname(outpath))
-        
         with open(outpath, 'w+') as f:
-            f.write('track_id, filename, from_sunrise, det_score, x, y, r, lon, lat, radius, is_rain\n')
+            f.write('track_id,filename,from_sunrise,det_score,x,y,r,lon,lat,radius,is_rain\n')
             for track in tqdm(tracks, desc="Write tracks into csv"):
                 # remove the tail of tracks (which are generated from Kalman filter instead of detector)
                 for idx in range(len(track["det_or_pred"])-1, -1, -1):

@@ -75,9 +75,9 @@ class Downloader:
         start_time = time.time()
         if self.index == self.num_days:
             return StopIteration
-        scan_paths, key_prefix, log_path, logger = self.download_scans(self.days[self.index])
+        scan_paths, key_prefix, logger = self.download_scans(self.days[self.index])
         self.index = self.index + 1
-        return scan_paths, start_time, key_prefix, log_path, logger
+        return scan_paths, start_time, key_prefix, logger
 
 
     def download_scans(self, current_date):
@@ -110,7 +110,7 @@ class Downloader:
             except Exception as ex:
                 logger.error('[Download Failure] scan %s - %s' % (key.split("/")[-1], str(ex)))
 
-        return scan_paths, key_prefix, log_path, logger
+        return scan_paths, key_prefix, logger
 
 
 if __name__ == "__main__":

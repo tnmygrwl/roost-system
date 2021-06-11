@@ -7,9 +7,6 @@ from sklearn.neighbors import NearestNeighbors
 from roosts.utils.geo_util import geo_dist_km, get_roost_coor, sunrise_time
 from tqdm import tqdm
 
-import importlib_resources as pkg_resources
-
-
 
 class Postprocess():
     """ 
@@ -20,7 +17,6 @@ class Postprocess():
     def __init__(self, 
                  imsize = 600, 
                  geosize = 300000, # by default, the image size represents 300km
-                 #windfarm_database = "", # the path of windfarm database
                  clean_windfarm = True,
                  clean_rain = True,
                  ): # this means large y coordinate indicate the North
@@ -225,7 +221,4 @@ if __name__ == "__main__":
                  ]
     postprocess= Postprocess()
     dets = postprocess.annotate_detections(detections, [])
-
-
-
 

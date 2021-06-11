@@ -76,14 +76,14 @@ class Renderer:
     """
 
     def __init__(self, 
-                 npz_dir, roosts_ui_data_dir,
+                 npz_dir, ui_img_dir,
                  array_render_config=ARRAY_RENDER_CONFIG, 
                  dualpol_render_config=DUALPOL_RENDER_CONFIG):
 
         self.npzdir = npz_dir
-        self.ref_imgdir = os.path.join(roosts_ui_data_dir, 'ref0.5_images')
-        self.rv_imgdir = os.path.join(roosts_ui_data_dir, 'rv0.5_images')
-        self.imgdirs = {("reflectivity", 0.5): self.ref_imgdir, ("velocity", 0.5): self.rv_imgdir}
+        self.dz0_5_imgdir = os.path.join(ui_img_dir, 'dz0.5')
+        self.vr0_5_imgdir = os.path.join(ui_img_dir, 'vr0.5')
+        self.imgdirs = {("reflectivity", 0.5): self.dz0_5_imgdir, ("velocity", 0.5): self.vr0_5_imgdir}
         self.array_render_config = array_render_config
         self.dualpol_render_config = dualpol_render_config
 
@@ -91,11 +91,11 @@ class Renderer:
     def render(self, scan_paths, key_prefix, logger):
 
         npzdir = os.path.join(self.npzdir, key_prefix)
-        ref_imgdir = os.path.join(self.ref_imgdir, key_prefix)
-        rv_imgdir = os.path.join(self.rv_imgdir, key_prefix)
+        dz0_5_imgdir = os.path.join(self.dz0_5_imgdir, key_prefix)
+        vr0_5_imgdir = os.path.join(self.vr0_5_imgdir, key_prefix)
         os.makedirs(npzdir, exist_ok = True)
-        os.makedirs(ref_imgdir, exist_ok = True)
-        os.makedirs(rv_imgdir, exist_ok = True)
+        os.makedirs(dz0_5_imgdir, exist_ok = True)
+        os.makedirs(vr0_5_imgdir, exist_ok = True)
 
         npz_files = [] # for detection module to load/preprocess data
         img_files = [] # for visualization
@@ -105,7 +105,7 @@ class Renderer:
             
             scan = os.path.splitext(os.path.basename(scan_file))[0]
             npz_path = os.path.join(npzdir, f"{scan}.npz")
-            ref1_path = os.path.join(ref_imgdir, f"{scan}.png")
+            ref1_path = os.path.join(dz0_5_imgdir, f"{scan}.png")
 
             """
             if os.path.exists(npz_path) and os.path.exists(ref1_path):

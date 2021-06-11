@@ -1,5 +1,6 @@
 import os
-import torch.cuda
+import torch
+print("torch.get_num_threads: ", torch.get_num_threads())
 from roosts.data.downloader import Downloader
 from roosts.data.renderer import Renderer
 from roosts.detection.detector import Detector
@@ -15,7 +16,6 @@ import time
 import argparse
 
 here = os.path.dirname(os.path.realpath(__file__))
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--station', type=str, required=True, help="a single station name, eg. KDOX")
@@ -39,13 +39,16 @@ vis_det_dir         = os.path.join(args.data_root, 'vis_dets') # visualization o
 vis_cleaned_det_dir = os.path.join(args.data_root, 'vis_cleaned_dets') # visualization of detections after removing rain / windfarm
 vis_track_dir       = os.path.join(args.data_root, 'vis_tracks') # visualization of tracks
 vis_NMS_track_dir   = os.path.join(args.data_root, 'vis_NMS_tracks') # visualization of tracks after NMS
-roosts_ui_data_dir  = os.path.join(args.data_root, 'roosts_ui_data') # save files for website ui visualization
+ui_dir              = os.path.join(args.data_root, 'ui') # save files for website ui visualization
+ui_img_dir          = os.path.join(ui_dir, 'img')
+scan_and_track_dir  = os.path.join(ui_dir, "scans_and_tracks")
+os.makedirs(scan_and_track_dir, exist_ok=True)
 
 
 ######################## Initialize models ############################
 downloader  = Downloader(min_before_sunrise=30, min_after_sunrise=90, log_dir=log_root_dir)
 downloader.set_request(request, scan_dir)
-renderer    = Renderer(npz_dir, roosts_ui_data_dir)
+renderer    = Renderer(npz_dir, ui_img_dir)
 detector    = Detector(args.ckpt_path, use_gpu=torch.cuda.is_available())
 tracker     = Tracker()
 visualizer  = Visualizer()
@@ -65,7 +68,7 @@ for day_idx, downloader_outputs in enumerate(downloader):
     if downloader_outputs is StopIteration:
         break
     else:
-        scan_paths, start_time, key_prefix, log_path, logger = downloader_outputs
+        scan_paths, start_time, key_prefix, logger = downloader_outputs
 
     ######################## (2) Render data ############################
     """
@@ -76,6 +79,11 @@ for day_idx, downloader_outputs in enumerate(downloader):
 
     npz_files, img_files, scan_names = renderer.render(scan_paths, key_prefix, logger)
     fileUtil.delete_files(scan_paths)
+
+    with open(os.path.join(
+            scan_and_track_dir, f'scans_{args.station}_{args.start}_{args.end}.txt'
+    ), "w") as f:
+        f.writelines([scan_name + "\n" for scan_name in scan_names])
 
     if len(npz_files) == 0:
         print()
@@ -107,8 +115,8 @@ for day_idx, downloader_outputs in enumerate(downloader):
     logger.info(f'[Postprocessing Done] {len(cleaned_detections)} cleaned detections')
 
     ######################## (6) Visualize the detection and tracking results  ############################
-    # gif_path1 = visualizer.draw_detections(img_files, copy.deepcopy(detections),
-    #                             vis_det_dir, score_thresh=0.000, save_gif=True)
+    gif_path1 = visualizer.draw_detections(img_files, copy.deepcopy(detections),
+                                vis_det_dir, score_thresh=0.000, save_gif=True)
     #
     # gif_path2 = visualizer.draw_detections(img_files, copy.deepcopy(tracked_detections),
     #                            vis_track_dir,  save_gif=True,  vis_track=True)
@@ -116,13 +124,14 @@ for day_idx, downloader_outputs in enumerate(downloader):
     # gif_path3 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
     #                             vis_cleaned_det_dir, score_thresh=0.000, save_gif=True)
     #
-    # gif_path4 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
-    #                              vis_NMS_track_dir, save_gif=True, vis_track=True, vis_track_after_NMS=True)
+    gif_path4 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
+                                 vis_NMS_track_dir, save_gif=True, vis_track=True, vis_track_after_NMS=True)
     
     # generate a website file
     station_day = scan_names[0][:12]
-    visualizer.generate_web_files(cleaned_detections, tracks,
-                                  os.path.join(roosts_ui_data_dir, "annotations", args.station, f'{station_day}.txt'))
+    visualizer.generate_web_files(cleaned_detections, tracks, os.path.join(
+        scan_and_track_dir, f'tracks_{args.station}_{args.start}_{args.end}.txt'
+    ))
 
     end_time = time.time()
     logger.info(f'[Finished] running the system on {station_day}; '
