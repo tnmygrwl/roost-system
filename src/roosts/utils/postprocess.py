@@ -156,33 +156,71 @@ class Postprocess():
         detections = self.geo_converter(detections)
         # populate detections with mins from sunrise time
         detections = self.add_sunrise_time(detections)
-
+    
         # clean up the windfarms using windfarm database
+        det_dict = {}
+        for det in detections:
+            det_dict[det["det_ID"]] = det
         if self.clean_windfarm:
-            det_dict = {}
-            for det in detections:
-                det_dict[det["det_ID"]] = det
             for track in tqdm(tracks, desc="Cleaning windfarm"):
-                # only check the first detection
-                head_det_ID =  track["det_IDs"][0]
-                bbox = det_dict[head_det_ID]["geo_bbox"]
-                flag = self._is_there_wind_farm(bbox)
+                # only check reliable tracks, otherwise it is too time-consuming
+                if np.sum(track["det_or_pred"]) >= 3:
+                    # only check the first detection
+                    head_det_ID =  track["det_IDs"][0]
+                    bbox = det_dict[head_det_ID]["geo_bbox"]
+                    flag = self._is_there_wind_farm(bbox)
+                else:
+                    flag = False
                 for det_ID in track["det_IDs"]:
                     det_dict[det_ID]["windfarm"] = flag
 
         # clean up the windfarms using dualpol
         if self.clean_rain:
-            for det in tqdm(detections, desc="Cleaning rain"):
-                scanname = det["scanname"]
-                npz_file = scan_dict[scanname]
-                bbox = det["im_bbox"]
+            dualpol_data = {}
+            for scanname, npz_file in scan_dict.items():
                 radar_data = np.load(npz_file)
                 if "dualpol_array" in radar_data.files:
                     dualpol = radar_data["dualpol_array"]
                     dualpol = dualpol[:, :, ::-1, :] # flip the array 
+                else:
+                    dualpol = None
+                dualpol_data[scanname] = dualpol
+
+            for track in tqdm(tracks, desc="Cleaning rain"):
+                # heuristics: a rain track is typically long, to speed up the system:
+                if np.sum(track["det_or_pred"]) < 3:
+                    for det_ID in track["det_IDs"]:
+                        # assume these detections are not rain
+                        det_dict[det_ID]["rain"] = False
+                    continue
+                rain_flags = []
+                # only check the first 3 dets:
+                for det_i in range(min(3, len(track["det_IDs"]))): 
+                    # only check the first detection
+                    det_ID =  track["det_IDs"][det_i]
+                    bbox = det_dict[det_ID]["im_bbox"]
+                    scanname = det_dict[det_ID]["scanname"]
+                    dualpol = dualpol_data[scanname]
+                    if dualpol is not None:
+                        flag = self._is_there_rain(bbox, dualpol)
+                    else:
+                        flag = False
+                    rain_flags.append(flag)
+                for det_ID in track["det_IDs"]:
+                    # as long as there is one rain, the track is rain
+                    det_dict[det_ID]["rain"] = max(rain_flags) 
+
+            '''
+            for det in tqdm(detections, desc="Cleaning rain"):
+                scanname = det["scanname"]
+                bbox = det["im_bbox"]
+                dualpol = dualpol_data[scanname]
+                if dualpol is not None:
                     det["rain"] = self._is_there_rain(bbox, dualpol)
                 else:
                     det["rain"] = False
+            '''
+            del dualpol_data
 
         return detections
 

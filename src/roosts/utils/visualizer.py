@@ -6,6 +6,7 @@ import cv2
 import imageio
 import roosts.utils.file_util as fileUtil
 from tqdm import tqdm
+import itertools 
 
 class Visualizer:
 
@@ -37,7 +38,6 @@ class Visualizer:
                              type: list of dict
                 outdir: path to save images
                 score_thresh: only display bbox with score higher than threshold
-                save_image: store image 
                 save_gif:   save image sequence as gif on a single station in daily basis
 
             Returns: 
@@ -70,6 +70,121 @@ class Visualizer:
             return gif_path
             
         return True
+
+
+    def draw_dets_multi_thresh(self,
+                        image_paths, 
+                        detections, 
+                        outdir,):
+        """ 
+            Draws detections on the images under different score thresholds
+        
+            Args:
+                image_paths: absolute path of images, type: list
+                detections:  the output of detector or tracker with the structure 
+                             {"scanname":xx, "im_bbox": xx, "det_ID": xx, 'det_score': xx}
+                             type: list of dict
+                outdir: path to save images
+
+            Returns: 
+                image with bboxes
+        """
+        fileUtil.mkdir(outdir)
+        outpaths = []
+
+        dets_multi_thresh = {} 
+        for score_thresh in [0.0, 0.05, 0.1, 0.3, 0.5, 0.7]:
+            dets_multi_thresh[score_thresh] = [det for det in detections if det["det_score"] >= score_thresh]
+
+        for image_path in tqdm(image_paths, desc="Visualizing"):
+
+            image = cv2.imread(image_path)
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            scanname = os.path.splitext(os.path.basename(image_path))[0]
+
+            out_thre = []
+            for score_thresh in [0.0, 0.05, 0.1, 0.3, 0.5, 0.7]:
+                dets = [det for det in dets_multi_thresh[score_thresh] if det["scanname"] in scanname]
+                outname_thre = os.path.join(outdir, scanname + "%.2f.jpg" % score_thresh)
+                self.overlay_detections(image, dets, outname_thre)
+                out_thre.append(outname_thre)
+
+            outname = os.path.join(outdir, os.path.basename(image_path))
+            outpaths.append(outname)
+            # merge files and delect useless files
+            figs = []
+            for out in out_thre:
+                fig = cv2.imread(out)
+                fig = cv2.resize(fig, (300, 300))
+                figs.append(fig)
+            fileUtil.delete_files(out_thre)
+            fig_all = cv2.hconcat(figs)
+            cv2.imwrite(outname, fig_all)
+
+        gif_path = os.path.join(outdir, scanname.split("_")[0] + '.gif')
+        self.save_gif(outpaths, gif_path)
+        return gif_path
+        
+
+    def draw_tracks_multi_thresh(self,
+                        image_paths, 
+                        detections, 
+                        tracks,
+                        outdir,
+                        vis_track_after_NMS=True):
+        """ 
+            Draws tracks on the images under different threholds
+        
+            Args:
+                image_paths: absolute path of images, type: list
+                detections:  the output of detector or tracker with the structure 
+                             {"scanname":xx, "im_bbox": xx, "det_ID": xx, 'det_score': xx}
+                             type: list of dict
+                outdir: path to save images
+
+            Returns: 
+                image with bboxes
+        """
+        fileUtil.mkdir(outdir)
+        outpaths = []
+
+        if vis_track_after_NMS:
+            tracks = [t for t in tracks if not t["NMS_suppressed"]]
+
+        tracks_multi_thresh = {} 
+        for score_thresh in [1, 2, 3, 4, 5, 6]: # number of bbox from detector in a track
+            id_list = [t["det_IDs"] for t in tracks if sum(t["det_or_pred"]) >= score_thresh]
+            tracks_multi_thresh[score_thresh] = list(itertools.chain(*id_list))
+
+        for image_path in tqdm(image_paths, desc="Visualizing"):
+            image = cv2.imread(image_path)
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            scanname = os.path.splitext(os.path.basename(image_path))[0]
+            dets = [det for det in detections if det["scanname"] in scanname]
+
+            out_thre = []
+            for score_thresh in [1, 2, 3, 4, 5, 6]:
+                dets_thre = [det for det in dets if det["det_ID"] in tracks_multi_thresh[score_thresh]]
+                outname_thre = os.path.join(outdir, scanname + "%.2f.jpg" % score_thresh)
+                self.overlay_detections(image, dets_thre, outname_thre)
+                out_thre.append(outname_thre)
+
+            outname = os.path.join(outdir, os.path.basename(image_path))
+            outpaths.append(outname)
+            # merge files and delect useless files
+            figs = []
+            for out in out_thre:
+                fig = cv2.imread(out)
+                fig = cv2.resize(fig, (300, 300))
+                figs.append(fig)
+            fileUtil.delete_files(out_thre)
+            fig_all = cv2.hconcat(figs)
+            cv2.imwrite(outname, fig_all)
+
+        gif_path = os.path.join(outdir, scanname.split("_")[0] + '.gif')
+        self.save_gif(outpaths, gif_path)
+        return gif_path
+
 
     def overlay_detections(self, image, detections, outname):
         """ Overlay bounding boxes on images  """
@@ -107,7 +222,6 @@ class Visualizer:
         fig.savefig(outname) 
         plt.close()
 
-    
 
     def save_gif(self, image_paths, outpath):
         """ 

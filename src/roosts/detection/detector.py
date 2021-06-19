@@ -14,15 +14,21 @@ class Detector:
                  imsize=1200,        # input image size 
                  nms_thresh=0.3,     # non-maximum suppression
                  score_thresh=0.005, # filter out detections with score lower than score_thresh
-                 CONFIG_FILE = "COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml", # define the detection model
+                 CONFIG_FILE = "COCO-Detection/faster_rcnn_R_50_C4_3x.yaml", # define the detection model
                  use_gpu=False,          # GPU or CPU
+                 anchor_strategy=2,  # predefined anchor sizes 
                  ):
 
         cfg = get_cfg()
         cfg.merge_from_file(model_zoo.get_config_file(CONFIG_FILE))
 
-        cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[32], [64], [128], [256], [512]]
-        cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIO = [[1.0]] 
+        if anchor_strategy == 1:
+            cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[32], [64], [128], [256], [512]]
+        elif anchor_strategy == 2:
+            cfg.MODEL.ANCHOR_GENERATOR.SIZES = [[16, 32, 48, 64, 80, 96, 112, 128, 144]]
+        else:
+            raise NotImplementedError("undefined anchor strategy")
+        cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [1.0] 
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  
         cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.005
         cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = 0.3

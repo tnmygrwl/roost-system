@@ -10,7 +10,8 @@ def mkdir(dirname):
 
 
 def delete_files(filepaths):
-    for filepath in tqdm(filepaths, desc="Delete useless files"):
+    # for filepath in tqdm(filepaths, desc="Delete useless files"):
+    for filepath in filepaths:
         if os.path.exists(filepath):
             os.remove(filepath)
 
