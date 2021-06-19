@@ -131,7 +131,8 @@ class Visualizer:
                         detections, 
                         tracks,
                         outdir,
-                        vis_track_after_NMS=True):
+                        vis_track_after_NMS=True, 
+                        vis_track_after_merge=True):
         """ 
             Draws tracks on the images under different threholds
         
@@ -148,8 +149,13 @@ class Visualizer:
         fileUtil.mkdir(outdir)
         outpaths = []
 
+        # NOTE: vis_track_after_NMS is useless, because the tracks have been suppressed in-place by tracker
         if vis_track_after_NMS:
             tracks = [t for t in tracks if not t["NMS_suppressed"]]
+            display_option = "track_ID"
+
+        if vis_track_after_merge:
+            display_option = "merge_track_ID"
 
         tracks_multi_thresh = {} 
         for score_thresh in [1, 2, 3, 4, 5, 6]: # number of bbox from detector in a track
@@ -166,7 +172,7 @@ class Visualizer:
             for score_thresh in [1, 2, 3, 4, 5, 6]:
                 dets_thre = [det for det in dets if det["det_ID"] in tracks_multi_thresh[score_thresh]]
                 outname_thre = os.path.join(outdir, scanname + "%.2f.jpg" % score_thresh)
-                self.overlay_detections(image, dets_thre, outname_thre)
+                self.overlay_detections(image, dets_thre, outname_thre, display_option)
                 out_thre.append(outname_thre)
 
             outname = os.path.join(outdir, os.path.basename(image_path))
@@ -186,7 +192,7 @@ class Visualizer:
         return gif_path
 
 
-    def overlay_detections(self, image, detections, outname):
+    def overlay_detections(self, image, detections, outname, display_option='det_score'):
         """ Overlay bounding boxes on images  """
 
         fig = mplfigure.Figure(frameon=False)
@@ -209,12 +215,24 @@ class Visualizer:
                                2*r, fill=False,
                                edgecolor= '#FF00FF', linewidth=3)
                 )
-            if "track_ID" in det.keys():
+            if  display_option == "track_ID":
+                if "track_ID" in det.keys():
+                    ax.text(x-r, y-r-2,
+                            '{:d}'.format(det["track_ID"]),
+                            bbox=dict(facecolor='blue', alpha=0.7),
+                            fontsize=14, color='white')
+            elif display_option == "merge_track_ID":
+                if "merge_track_ID" in det.keys():
+                    display_text = det["merge_track_ID"]
+                elif "track_ID" in det.keys():
+                    display_text = '{:d}'.format(det["track_ID"])
+                else:
+                    continue
                 ax.text(x-r, y-r-2,
-                        '{:d}'.format(det["track_ID"]),
+                        display_text,
                         bbox=dict(facecolor='blue', alpha=0.7),
                         fontsize=14, color='white')
-            else:
+            else: # det_score
                 ax.text(x-r, y-r-2,
                         '{:.3f}'.format(score),
                         bbox=dict(facecolor='#FF00FF', alpha=0.7),

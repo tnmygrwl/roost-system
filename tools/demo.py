@@ -37,8 +37,7 @@ npz_dir             = os.path.join(args.data_root, 'arrays') # npz files and ren
 log_root_dir        = os.path.join(args.data_root, 'logs')
 vis_det_dir         = os.path.join(args.data_root, 'vis_dets') # visualization of detections from detection model
 vis_cleaned_det_dir = os.path.join(args.data_root, 'vis_cleaned_dets') # visualization of detections after removing rain / windfarm
-vis_track_dir       = os.path.join(args.data_root, 'vis_tracks') # visualization of tracks
-vis_NMS_track_dir   = os.path.join(args.data_root, 'vis_NMS_tracks') # visualization of tracks after NMS
+vis_NMS_MERGE_track_dir   = os.path.join(args.data_root, 'vis_NMS_MERGE_tracks') # vis of tracks after NMS & merge
 ui_dir              = os.path.join(args.data_root, 'ui') # save files for website ui visualization
 ui_img_dir          = os.path.join(ui_dir, 'img')
 scan_and_track_dir  = os.path.join(ui_dir, "scans_and_tracks")
@@ -46,7 +45,7 @@ os.makedirs(scan_and_track_dir, exist_ok=True)
 
 
 ######################## Initialize models ############################
-downloader  = Downloader(min_before_sunrise=30, min_after_sunrise=30, log_dir=log_root_dir)
+downloader  = Downloader(min_before_sunrise=30, min_after_sunrise=90, log_dir=log_root_dir)
 downloader.set_request(request, scan_dir)
 renderer    = Renderer(npz_dir, ui_img_dir)
 detector    = Detector(args.ckpt_path, use_gpu=torch.cuda.is_available())
@@ -117,38 +116,14 @@ for day_idx, downloader_outputs in enumerate(downloader):
 
     ######################## (6) Visualize the detection and tracking results  ############################
     
-    # gif_path1 = visualizer.draw_detections(
-    #    img_files, copy.deepcopy(detections), os.path.join(vis_det_dir, args.station),
-    #    score_thresh=0.000, save_gif=True
-    # )
-
     """ visualize detections under multiple thresholds of detection score"""
     gif_path1 = visualizer.draw_dets_multi_thresh(
         img_files, copy.deepcopy(detections), os.path.join(vis_det_dir, args.station))
 
-    # gif_path2 = visualizer.draw_detections(img_files, copy.deepcopy(tracked_detections),
-    #                            os.path.join(vis_track_dir, args.station),  save_gif=True,  vis_track=True)
-    #
-
-    """ visualize tracks under multiple thresholds of track score (num of dets from detector)"""
-    gif_path2_1 = visualizer.draw_tracks_multi_thresh(
-        img_files, copy.deepcopy(tracked_detections), copy.deepcopy(tracks), os.path.join(vis_track_dir, 
-        args.station), vis_track_after_NMS=False)
-
-    """ visualize results after NMS on tracks"""
-    gif_path2_2 = visualizer.draw_tracks_multi_thresh(
-        img_files, copy.deepcopy(tracked_detections), copy.deepcopy(tracks), os.path.join(vis_NMS_track_dir, 
-        args.station), vis_track_after_NMS=True)
-
-
-    # gif_path3 = visualizer.draw_detections(img_files, copy.deepcopy(cleaned_detections),
-    #                             os.path.join(vis_cleaned_det_dir, args.station), score_thresh=0.000, save_gif=True)
-
-
-    #gif_path4 = visualizer.draw_detections(
-    #    img_files, copy.deepcopy(cleaned_detections), os.path.join(vis_NMS_track_dir, args.station),
-    #    save_gif=True, vis_track=True, vis_track_after_NMS=True
-    #)
+    """ visualize results after NMS and merging on tracks"""
+    gif_path2 = visualizer.draw_tracks_multi_thresh(
+        img_files, copy.deepcopy(tracked_detections), copy.deepcopy(tracks), os.path.join(vis_NMS_MERGE_track_dir, 
+        args.station))
     
     # generate a website file
     station_day = scan_names[0][:12]

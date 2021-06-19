@@ -156,10 +156,13 @@ class Postprocess():
         detections = self.geo_converter(detections)
         # populate detections with mins from sunrise time
         detections = self.add_sunrise_time(detections)
-    
+        # use only tracks after NMS 
+        tracks = [t for t in tracks if not t["NMS_suppressed"]]
+
         # clean up the windfarms using windfarm database
         det_dict = {}
         for det in detections:
+            det["rain"] = False
             det_dict[det["det_ID"]] = det
         if self.clean_windfarm:
             for track in tqdm(tracks, desc="Cleaning windfarm"):

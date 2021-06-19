@@ -122,6 +122,7 @@ class Tracker:
                 tracks[track_idx]['state'] = updated_state
 
         detections, tracks = self.NMS_tracks(detections, tracks)
+        detections, tracks = self.merge_tracks(detections, tracks)
         
         return detections, tracks
 
@@ -223,14 +224,101 @@ class Tracker:
         return {'mean': X, 'var': P}, H.dot(X)
 
 
-    def NMS_tracks(self, detections, tracks):
+    def merge_tracks(self, detections, tracks):
         """
-            Apply Non-Maximum Suppression on the tracks 
+            Merge tracks on the same roost site
 
             Args:
                 detections: the updated detections after tracking 
                 tracks:     the tracks from the above tracking algorithm 
 
+            Returns:
+                updated tracks with new field "NMS_suppressed": 
+                            True means track is suppressed by NMS; 
+                            False means track is not suppressed by NMS
+            Why multi-detections on a same roost happens?
+                (1) a lot of anchors on a same image location
+                (2) the NMS threshold on anchors is low but higher one may cause missing detections 
+        """
+
+        # (1) sort the tracks and radar scan names  
+        tracks = [t for t in tracks if not t["NMS_suppressed"]]
+        tracks.sort(key= lambda x: sum(x["det_or_pred"]), reverse=True)
+        det_dict = {}
+        for det in detections:
+            det_dict[det["det_ID"]] = det
+        # init
+        for track in tracks:
+            track["merged"] = False
+        # sort the scans based on scan time
+        scans = list(set([det["scanname"] for det in detections]))
+        scans.sort(key=lambda x: int(x[4:12] + x[13:19])) # the first 4 characters are radar station name
+        scan_dict = {}
+        for scan_idx, scan in enumerate(scans):
+            scan_dict[scan] = scan_idx
+
+        # (2) start from the first tracks, measure its overlap with other tracks
+        # get the last det from track1 and the first det from track2, measure the overlap, 
+        # if higher than a thresh, merge
+        merge_list = []
+        for i, track_i in enumerate(tracks):
+
+            if track_i["merged"]:
+                continue
+            else:
+                track_i["merged"] = True
+
+            sub_merge_list = [track_i["track_ID"]]
+
+            # get the last det
+            for k in range(len(track_i["det_or_pred"])-1, -1, -1):
+                if track_i["det_or_pred"][k]:
+                    last_det_idx = k
+                    break
+            last_det_i = det_dict[track_i["det_IDs"][last_det_idx]]
+
+            for j, track_j in enumerate(tracks[i+1:]):
+                if track_j["merged"]:
+                    continue
+                # get the first det
+                first_det_j = det_dict[track_j["det_IDs"][0]]
+
+                # the tracks to be merged should not be far more than 3 frames or overlapped (has been solved by NMS)
+                if ((scan_dict[first_det_j["scanname"]] - scan_dict[last_det_i["scanname"]] <= 3) and 
+                    (scan_dict[first_det_j["scanname"]] - scan_dict[last_det_i["scanname"]] > 0)):
+                    if self._is_det_overlapped(first_det_j["im_bbox"], last_det_i["im_bbox"]):
+                        # merge two tracks
+                        sub_merge_list.append(track_j["track_ID"])
+                        track_j["merged"] = True
+            merge_list.append(sub_merge_list)
+
+        track_id_dict = {}        
+        for merge_idx, sub_merge_list in enumerate(merge_list):
+            if len(sub_merge_list) == 1:
+                continue
+            # track_new_id = '-'.join([str(tid) for tid in sub_merge_list])
+            track_new_id = min(sub_merge_list)
+            for track_id in sub_merge_list:
+                track_id_dict[track_id] = track_new_id
+
+        # add a new field in the track and detection: merged_track_id
+        for track in tracks:
+            if track["track_ID"] in track_id_dict.keys():
+                # track["merge_track_ID"] = track_id_dict[track["track_ID"]]
+                track["track_ID"] = track_id_dict[track["track_ID"]]
+                for det_id in track["det_IDs"]:
+                    # det_dict[det_id]["merge_track_ID"] = track_id_dict[track["track_ID"]]
+                    det_dict[det_id]["track_ID"] = track_id_dict[track["track_ID"]]
+
+        return detections, tracks
+
+
+    def NMS_tracks(self, detections, tracks):
+        """
+            Apply Non-Maximum Suppression on the tracks 
+            Args:
+                detections: the updated detections after tracking 
+                tracks:     the tracks from the above tracking algorithm 
             Returns:
                 updated tracks with new field "NMS_suppressed": 
                             True means track is suppressed by NMS; 
