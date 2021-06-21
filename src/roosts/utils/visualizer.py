@@ -164,7 +164,17 @@ class Visualizer:
 
         tracks_multi_thresh = {} 
         for score_thresh in [1, 2, 3, 4, 5, 6]: # number of bbox from detector in a track
-            id_list = [t["det_IDs"] for t in tracks if sum(t["det_or_pred"]) >= score_thresh]
+            # id_list = [t["det_IDs"] for t in tracks if sum(t["det_or_pred"]) >= score_thresh]
+            id_list = []
+            for track in tracks:
+                if sum(track["det_or_pred"]) >= score_thresh:
+                    for idx in range(len(track["det_or_pred"])-1, -1, -1):
+                        if track["det_or_pred"][idx]:
+                            last_pred_idx = idx
+                            break
+                    # do not viz the tail of tracks
+                    id_list.append(track["det_IDs"][:last_pred_idx+1])
+
             tracks_multi_thresh[score_thresh] = list(itertools.chain(*id_list))
 
         for image_path in tqdm(image_paths, desc="Visualizing"):
