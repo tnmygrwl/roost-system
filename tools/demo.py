@@ -22,7 +22,7 @@ parser.add_argument('--station', type=str, required=True, help="a single station
 parser.add_argument('--start', type=str, required=True, help="the first day to process, eg. 20101001")
 parser.add_argument('--end', type=str, required=True, help="the last day to process, eg. 20101001")
 parser.add_argument('--ckpt_path', type=str,
-                    default=f"{here}/../checkpoints/entire_lr_0.001.pth")
+                    default=f"{here}/../checkpoints/entire_c4_9anchor.pth")
 parser.add_argument('--data_root', type=str,
                     default=f"{here}/../roosts_data")
 args = parser.parse_args()
@@ -118,12 +118,14 @@ for day_idx, downloader_outputs in enumerate(downloader):
     
     """ visualize detections under multiple thresholds of detection score"""
     gif_path1 = visualizer.draw_dets_multi_thresh(
-        img_files, copy.deepcopy(detections), os.path.join(vis_det_dir, args.station))
+        img_files, copy.deepcopy(detections), os.path.join(vis_det_dir, args.station)
+    )
 
     """ visualize results after NMS and merging on tracks"""
     gif_path2 = visualizer.draw_tracks_multi_thresh(
-        img_files, copy.deepcopy(tracked_detections), copy.deepcopy(tracks), os.path.join(vis_NMS_MERGE_track_dir, 
-        args.station))
+        img_files, copy.deepcopy(tracked_detections), copy.deepcopy(tracks),
+        os.path.join(vis_NMS_MERGE_track_dir, args.station)
+    )
     
     # generate a website file
     station_day = scan_names[0][:12]

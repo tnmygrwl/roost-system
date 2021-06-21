@@ -81,8 +81,8 @@ class Renderer:
                  dualpol_render_config=DUALPOL_RENDER_CONFIG):
 
         self.npzdir = npz_dir
-        self.dz0_5_imgdir = os.path.join(ui_img_dir, 'dz0.5')
-        self.vr0_5_imgdir = os.path.join(ui_img_dir, 'vr0.5')
+        self.dz0_5_imgdir = os.path.join(ui_img_dir, 'dz05')
+        self.vr0_5_imgdir = os.path.join(ui_img_dir, 'vr05')
         self.imgdirs = {("reflectivity", 0.5): self.dz0_5_imgdir, ("velocity", 0.5): self.vr0_5_imgdir}
         self.array_render_config = array_render_config
         self.dualpol_render_config = dualpol_render_config
