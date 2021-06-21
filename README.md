@@ -3,16 +3,6 @@ This repo implements a machine learning system for detecting and tracking commun
 in weather surveillance radar data, continuing work by Cheng et al. [1].
 Roost detection is based on [Detectron2](https://github.com/darkecology/detectron2) using PyTorch.
 
-#### Under Development
-- [x] log
-- [x] dir structure
-- [x] flip the image and coords
-- [x] double check the geographic coords
-- [x] double check the windfarm and rain
-- [x] debug tracking algorithm
-- [ ] testing: greatlake; scans with the old model; a year-station pair
-- [ ] testing: cpu version on swarm, rsync results from swarm to doppler
-
 #### Repository Overview
 - **checkpoints** is for trained model checkpoints
 - **src** is for system implementation
@@ -45,7 +35,7 @@ For running detection with GPU, check the cuda version at, for example, `/usr/lo
 
 2. Under **checkpoints**, download a trained detection checkpoint.
     ```bash
-    gdown --id 1MyZGkzfd939G4NjuQS4S2gFybqsYfwf6
+    gdown --id 1oeGhJ7Bm2Uv3-BmIRhVsoVoTP5crOoem
     ```
 
 3. [Configure AWS](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) by
