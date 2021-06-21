@@ -132,7 +132,8 @@ class Visualizer:
                         tracks,
                         outdir,
                         vis_track_after_NMS=True, 
-                        vis_track_after_merge=True):
+                        vis_track_after_merge=True,
+                        ignore_rain=True):
         """ 
             Draws tracks on the images under different threholds
         
@@ -142,6 +143,7 @@ class Visualizer:
                              {"scanname":xx, "im_bbox": xx, "det_ID": xx, 'det_score': xx}
                              type: list of dict
                 outdir: path to save images
+                ignore_rain: do not visualize the rain track
 
             Returns: 
                 image with bboxes
@@ -156,6 +158,9 @@ class Visualizer:
 
         if vis_track_after_merge:
             display_option = "merge_track_ID"
+
+        if ignore_rain:
+            tracks = [t for t in tracks if ("is_rain" in t.keys() and (not t["is_rain"]))]
 
         tracks_multi_thresh = {} 
         for score_thresh in [1, 2, 3, 4, 5, 6]: # number of bbox from detector in a track
@@ -268,6 +273,11 @@ class Visualizer:
         with open(outpath, 'a+') as f:
             n_tracks = 0
             for track in tqdm(tracks, desc="Write tracks into csv"):
+                
+                if (("is_windfarm" in track.keys() and track["is_windfarm"]) or 
+                    ("is_rain" in track.keys() and track["is_rain"])):
+                    continue
+
                 saved_track = False
                 # remove the tail of tracks (which are generated from Kalman filter instead of detector)
                 for idx in range(len(track["det_or_pred"])-1, -1, -1):
@@ -279,13 +289,12 @@ class Visualizer:
                     if idx > last_pred_idx:
                         break
                     det = det_dict[det_ID]
-                    if (("windfarm" in det.keys()) and det["windfarm"]):
-                        continue
-                    f.write('{:d},{:s},{:d},{:.3f},{:.2f},{:2f},{:2f},{:.2f},{:2f},{:2f},{:d}\n'.format(
+                    # if (("windfarm" in det.keys()) and det["windfarm"]):
+                    #    continue
+                    f.write('{:d},{:s},{:d},{:.3f},{:.2f},{:2f},{:2f},{:.2f},{:2f},{:2f}\n'.format(
                         det["track_ID"]+n_existing_tracks, det["scanname"], int(det["from_sunrise"]),
                         det["det_score"], det["im_bbox"][0], det["im_bbox"][1], det["im_bbox"][2], 
-                        det["geo_bbox"][0], det["geo_bbox"][1], det["geo_bbox"][2],
-                        det["rain"]))
+                        det["geo_bbox"][0], det["geo_bbox"][1], det["geo_bbox"][2]))
                     saved_track = True
                 if saved_track:
                     n_tracks += 1

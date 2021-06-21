@@ -174,6 +174,7 @@ class Postprocess():
                     flag = self._is_there_wind_farm(bbox)
                 else:
                     flag = False
+                track["is_windfarm"] = flag
                 for det_ID in track["det_IDs"]:
                     det_dict[det_ID]["windfarm"] = flag
 
@@ -184,18 +185,20 @@ class Postprocess():
                 radar_data = np.load(npz_file)
                 if "dualpol_array" in radar_data.files:
                     dualpol = radar_data["dualpol_array"]
-                    dualpol = dualpol[:, :, ::-1, :] # flip the array 
+                    dualpol = dualpol[1, 0, ::-1, :] # flip the array, and use the correlation coef.
                 else:
                     dualpol = None
                 dualpol_data[scanname] = dualpol
 
             for track in tqdm(tracks, desc="Cleaning rain"):
                 # heuristics: a rain track is typically long, to speed up the system:
+                """
                 if np.sum(track["det_or_pred"]) < 3:
                     for det_ID in track["det_IDs"]:
                         # assume these detections are not rain
                         det_dict[det_ID]["rain"] = False
                     continue
+                """
                 rain_flags = []
                 # only check the first 3 dets:
                 for det_i in range(min(3, len(track["det_IDs"]))): 
@@ -209,6 +212,7 @@ class Postprocess():
                     else:
                         flag = False
                     rain_flags.append(flag)
+                track["is_rain"] = max(rain_flags)
                 for det_ID in track["det_IDs"]:
                     # as long as there is one rain, the track is rain
                     det_dict[det_ID]["rain"] = max(rain_flags) 
@@ -225,7 +229,7 @@ class Postprocess():
             '''
             del dualpol_data
 
-        return detections
+        return detections, tracks
 
 
 if __name__ == "__main__":
