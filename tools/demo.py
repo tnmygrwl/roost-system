@@ -109,7 +109,7 @@ for day_idx, downloader_outputs in enumerate(downloader):
     #     (1) convert image coordinates to geometric coordinates;
     #     (2) clean up the false positives due to windfarm and rain using auxiliary information
     # """
-    cleaned_detections = postprocess.annotate_detections(copy.deepcopy(tracked_detections),
+    cleaned_detections, tracks = postprocess.annotate_detections(copy.deepcopy(tracked_detections),
                                                           copy.deepcopy(tracks),
                                                           npz_files)
     logger.info(f'[Postprocessing Done] {len(cleaned_detections)} cleaned detections')
