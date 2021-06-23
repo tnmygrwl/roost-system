@@ -15,9 +15,10 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
     - **utils** contains various utils, scripts to postprocess roost tracks, and scripts to generate visualization
 - **tools** is for system deployment
     - **demo.py** downloads radar scans, renders arrays, detects and tracks 
-    roosts in them, and postprocesses the results. 
-    - **launch_demo.py** is a modifiable template that submits **demo.sbatch** to servers with slurm management.
-    
+    roosts in them, and postprocesses the results 
+    - **launch_demo.py** is a modifiable template that submits **demo.sbatch** to servers with slurm management
+    - **demo.ipynb** is for interactively running the system to detect and track roosts in one day for a station
+
 #### Installation and Preparation
 1. Installation. Compatible PyTorch version can be found [here](https://pytorch.org/get-started/previous-versions/) 
 and [here](https://download.pytorch.org/whl/torch_stable.html).
@@ -49,7 +50,7 @@ Review the updated AWS config.
     vim ~/.aws/config
     ```
 
-4. (Optional) Jupyter.
+4. Jupyter notebook.
 - Install jupyter: `pip install jupyter`
 - Add the python environment to jupyter:
     ```bash
@@ -67,13 +68,13 @@ Review the updated AWS config.
 
 #### Run Inference
 In **tools**, modify **launch_demo.py** and run `python launch_demo.py`.
+Modify **demo.py** for more customization when needed. 
+Inference can be accelerated by rendering only useful channels.
 
 #### Website Visualization
-
-In the generated webfiles, the following information could be used to rank the tracks: 
+In the generated csv files, the following information could be used to further filter the tracks: 
 - track length
 - total/average detection scores (-1 represents the bbox is not from detector, instead, our tracking algorithm)
-- num of bbox identified as rain using dualpol data (is\_rain=1 means the bbox is occupied by the rain)
 - the minutes from sunrise of the first bbox in a track
 
 #### Reference

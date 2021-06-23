@@ -85,7 +85,7 @@ class Downloader:
         scan_paths = [] # list of the file path of downloaded scans
 
         key_prefix = os.path.join(current_date.strftime('%Y/%m/%d'), self.station)
-        log_dir = os.path.join(self.log_dir, self.station)
+        log_dir = os.path.join(self.log_dir, self.station, current_date.strftime('%Y'))
         os.makedirs(log_dir, exist_ok=True)
         log_path = os.path.join(log_dir, f"{self.station}_{current_date.strftime('%Y%m%d')}.log")
         logger = logging.getLogger(key_prefix)

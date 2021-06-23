@@ -36,25 +36,30 @@ scan_dir            = os.path.join(args.data_root, 'scans')  # save raw scans do
 npz_dir             = os.path.join(args.data_root, 'arrays') # npz files and rendered reflective/radio velocity
 log_root_dir        = os.path.join(args.data_root, 'logs')
 vis_det_dir         = os.path.join(args.data_root, 'vis_dets') # visualization of detections from detection model
-vis_cleaned_det_dir = os.path.join(args.data_root, 'vis_cleaned_dets') # visualization of detections after removing rain / windfarm
 vis_NMS_MERGE_track_dir   = os.path.join(args.data_root, 'vis_NMS_MERGE_tracks') # vis of tracks after NMS & merge
 ui_dir              = os.path.join(args.data_root, 'ui') # save files for website ui visualization
 ui_img_dir          = os.path.join(ui_dir, 'img')
-scan_and_track_dir  = os.path.join(ui_dir, "scans_and_tracks")
+scan_and_track_dir  = os.path.join(ui_dir, "scans_and_tracks", args.station)
 os.makedirs(scan_and_track_dir, exist_ok=True)
 
 
 ######################## Initialize models ############################
-downloader  = Downloader(min_before_sunrise=30, min_after_sunrise=90, log_dir=log_root_dir)
+downloader = Downloader(min_before_sunrise=30, min_after_sunrise=90, log_dir=log_root_dir)
 downloader.set_request(request, scan_dir)
-renderer    = Renderer(npz_dir, ui_img_dir)
-detector    = Detector(args.ckpt_path, use_gpu=torch.cuda.is_available())
-tracker     = Tracker()
-visualizer  = Visualizer()
-postprocess = Postprocess(imsize=600,
-                           geosize=300000,
-                           clean_windfarm=True,
-                           clean_rain=True)
+renderer = Renderer(npz_dir, ui_img_dir)
+detector = Detector(
+    args.ckpt_path,
+    anchor_sizes = [[16, 32, 48, 64, 80, 96, 112, 128, 144]], # [[32], [64], [128], [256], [512]] for FPN
+    use_gpu = torch.cuda.is_available()
+)
+tracker = Tracker()
+visualizer = Visualizer()
+postprocess = Postprocess(
+    imsize = 600,
+    geosize = 300000,
+    clean_windfarm = True,
+    clean_rain = True
+)
 n_existing_tracks = 0
 
 
@@ -69,6 +74,7 @@ for day_idx, downloader_outputs in enumerate(downloader):
         break
     else:
         scan_paths, start_time, key_prefix, logger = downloader_outputs
+        year, month, _, _ = key_prefix.split("/")
 
     ######################## (2) Render data ############################
     """
@@ -118,13 +124,13 @@ for day_idx, downloader_outputs in enumerate(downloader):
     
     """ visualize detections under multiple thresholds of detection score"""
     gif_path1 = visualizer.draw_dets_multi_thresh(
-        img_files, copy.deepcopy(detections), os.path.join(vis_det_dir, args.station)
+        img_files, copy.deepcopy(detections), os.path.join(vis_det_dir, args.station, year, month)
     )
 
     """ visualize results after NMS and merging on tracks"""
     gif_path2 = visualizer.draw_tracks_multi_thresh(
         img_files, copy.deepcopy(tracked_detections), copy.deepcopy(tracks),
-        os.path.join(vis_NMS_MERGE_track_dir, args.station)
+        os.path.join(vis_NMS_MERGE_track_dir, args.station, year, month)
     )
     
     # generate a website file

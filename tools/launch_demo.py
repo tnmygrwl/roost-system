@@ -1,10 +1,15 @@
 import os
 import time
 
-
 NUM_CPUS = 7
 # station, start date (inclusive), end date (inclusive)
-# ARGS = [("KTYX", "20160803", "20160804")]
+ARGS = [
+    ("KTYX", "20160803", "20160804"),
+    # ("KBUF", "20180109", "20180109"),
+    # ("KBUF", "20180123", "20180123"),
+    # ("KDOX", "20081002", "20081002"),
+    # ("KDOX", "20081010", "20081010")
+]
 # greatlakes_test
 # ARGS = [
 #     ("KBUF", "20100201", "20100331"),
@@ -21,15 +26,15 @@ NUM_CPUS = 7
 #     ("KTYX", "20170801", "20170930"),
 # ]
 # deployment
-STATIONS = ["KCLE", "KBUF", "KTYX", "KGRB", "KMQT", "KMKX",
-            "KLOT", "KIWX", "KGRR", "KAPX", "KDTX", "KDLH"]
-TIMES = [("20100101", "20100331"), ("20100401", "20100630"),
-         ("20100701", "20100930"), ("20101001", "20101231"),
-         ("20170101", "20170331"), ("20170401", "20170630"),
-         ("20170701", "20170930"), ("20171001", "20171231"),]
-ARGS = [(s, t[0], t[1]) for s in STATIONS for t in TIMES]
+# STATIONS = ["KCLE", "KBUF", "KTYX", "KGRB", "KMQT", "KMKX",
+#             "KLOT", "KIWX", "KGRR", "KAPX", "KDTX", "KDLH"]
+# TIMES = [("20100101", "20100331"), ("20100401", "20100630"),
+#          ("20100701", "20100930"), ("20101001", "20101231"),
+#          ("20170101", "20170331"), ("20170401", "20170630"),
+#          ("20170701", "20170930"), ("20171001", "20171231"),]
+# ARGS = [(s, t[0], t[1]) for s in STATIONS for t in TIMES]
 # directory for system outputs
-EXPERIMENT_NAME = "c4"
+EXPERIMENT_NAME = "test" #"c4"
 DATA_ROOT = f"/mnt/nfs/scratch1/wenlongzhao/roosts_data/{EXPERIMENT_NAME}"
 
 for args in ARGS:
@@ -55,6 +60,7 @@ for args in ARGS:
     --cpus-per-task={NUM_CPUS} \
     --mem-per-cpu=2000 \
     --partition=defq \
+    --time=12:00:00 \
     demo.sbatch --station {station} --start {start} --end {end} --data_root {DATA_ROOT}'''
     
     os.system(cmd)
