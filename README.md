@@ -17,7 +17,7 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
     - **demo.py** downloads radar scans, renders arrays, detects and tracks 
     roosts in them, and postprocesses the results 
     - **launch_demo.py** is a modifiable template that submits **demo.sbatch** to servers with slurm management
-    - **demo.ipynb** is for interactively running the system to detect and track roosts in one day for a station
+    - **demo.ipynb** is for interactively running the system
 
 #### Installation and Preparation
 1. Installation. Compatible PyTorch version can be found [here](https://pytorch.org/get-started/previous-versions/) 

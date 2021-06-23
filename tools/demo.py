@@ -39,7 +39,7 @@ vis_det_dir         = os.path.join(args.data_root, 'vis_dets') # visualization o
 vis_NMS_MERGE_track_dir   = os.path.join(args.data_root, 'vis_NMS_MERGE_tracks') # vis of tracks after NMS & merge
 ui_dir              = os.path.join(args.data_root, 'ui') # save files for website ui visualization
 ui_img_dir          = os.path.join(ui_dir, 'img')
-scan_and_track_dir  = os.path.join(ui_dir, "scans_and_tracks", args.station)
+scan_and_track_dir  = os.path.join(ui_dir, "scans_and_tracks")
 os.makedirs(scan_and_track_dir, exist_ok=True)
 
 
