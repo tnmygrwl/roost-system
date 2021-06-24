@@ -84,7 +84,7 @@ for day_idx, downloader_outputs in enumerate(downloader):
     """
 
     npz_files, img_files, scan_names = renderer.render(scan_paths, key_prefix, logger)
-    fileUtil.delete_files(scan_paths)
+    # fileUtil.delete_files(scan_paths)
 
     with open(os.path.join(
             scan_and_track_dir, f'scans_{args.station}_{args.start}_{args.end}.txt'

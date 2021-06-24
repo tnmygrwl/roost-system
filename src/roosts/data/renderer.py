@@ -107,13 +107,12 @@ class Renderer:
             npz_path = os.path.join(npzdir, f"{scan}.npz")
             ref1_path = os.path.join(dz0_5_imgdir, f"{scan}.png")
 
-            """
             if os.path.exists(npz_path) and os.path.exists(ref1_path):
                 npz_files.append(npz_path)
                 img_files.append(ref1_path)
                 scan_names.append(scan)
                 continue
-            """
+
             arrays = {}
 
             try:

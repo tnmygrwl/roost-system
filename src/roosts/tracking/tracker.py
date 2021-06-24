@@ -90,6 +90,7 @@ class Tracker:
             delta_t = (int(next_scan[13:15]) - int(scan[13:15])) * 60 + int(next_scan[15:17]) - int(scan[15:17]) 
             for track_idx, track in enumerate(tracks):
 
+
                 # fine the best match
                 if len(next_dets) == 0: # no detections in the next frame 
                     best_next_idx, best_next_det = None, None
@@ -157,8 +158,9 @@ class Tracker:
         # whether each of them are optimal or necessary, it works in practice anyway.
         # (1) the distance should be less than 3*time_interval 
         # (2) change in radius should be higher than 0.1 * radius, but less than 2.7 * time_interval
-        match_list = np.where(((center_dist < self.params['max_center_velocity'] * t) &  # roost should not move too far
-                               (r_change <= self.params['radius_velocity'] * t)  & # roost should not expand too much
+        # NOTE: the following range is very empirical and may be only suboptimal
+        match_list = np.where(((center_dist < self.params['max_center_velocity'] * 1.5 * t) &  # should not move too far
+                               (r_change <= self.params['radius_velocity'] * 2 * t)  & # should not expand too much
                                (r_change > -0.1 * r)))[0] # roost should not shrink too much
         if len(match_list) == 0: # no match found
             return None, None
@@ -207,17 +209,17 @@ class Tracker:
             # R is the covairance matrix of noise in measurement, here I assume it is correlated to det score
             R = np.eye(3) + self.params['R_multiplier'] * np.eye(3) * (1 - det_score)
             # Kalman Gain
-            '''
             P_prior_inv = np.linalg.inv(P_prior)
             R_inv = np.linalg.inv(R)
             P = np.linalg.inv(P_prior_inv + H.T.dot(R_inv).dot(H))
             K = P.dot(H.T).dot(R_inv)
-            '''
             # below is the most common Kalman filter formula, not sure where the above formula from in caffe version
             # the Kalman gain is equivalent, but the P is different, I believe below should be right
             # but the above also works in practice, anyway 
+            '''
             K = P_prior.dot(H.T).dot(np.linalg.inv(H.dot(P_prior).dot(H.T) + R))
             P = (1 - K.dot(H)).dot(P_prior)
+            '''
             # Linear equation
             X = X + K.dot(det_bbox - H.dot(X))
 
@@ -260,15 +262,14 @@ class Tracker:
         # (2) start from the first tracks, measure its overlap with other tracks
         # get the last det from track1 and the first det from track2, measure the overlap, 
         # if higher than a thresh, merge
-        merge_list = []
+        new_tracks = []
         for i, track_i in enumerate(tracks):
 
             if track_i["merged"]:
                 continue
             else:
                 track_i["merged"] = True
-
-            sub_merge_list = [track_i["track_ID"]]
+                new_track = copy.deepcopy(track_i)
 
             # get the last det
             for k in range(len(track_i["det_or_pred"])-1, -1, -1):
@@ -282,35 +283,26 @@ class Tracker:
                     continue
                 # get the first det
                 first_det_j = det_dict[track_j["det_IDs"][0]]
-
-                # the tracks to be merged should not be far more than 3 frames or overlapped (has been solved by NMS)
-                if ((scan_dict[first_det_j["scanname"]] - scan_dict[last_det_i["scanname"]] <= 3) and 
-                    (scan_dict[first_det_j["scanname"]] - scan_dict[last_det_i["scanname"]] > 0)):
+                # the tracks to be merged is not overlapped
+                frame_gap = scan_dict[first_det_j["scanname"]] - scan_dict[last_det_i["scanname"]]
+                if (frame_gap > 0) and (frame_gap < 3):
                     if self._is_det_overlapped(first_det_j["im_bbox"], last_det_i["im_bbox"]):
-                        # merge two tracks
-                        sub_merge_list.append(track_j["track_ID"])
                         track_j["merged"] = True
-            merge_list.append(sub_merge_list)
-
-        track_id_dict = {}        
-        for merge_idx, sub_merge_list in enumerate(merge_list):
-            if len(sub_merge_list) == 1:
-                continue
-            # track_new_id = '-'.join([str(tid) for tid in sub_merge_list])
-            track_new_id = min(sub_merge_list)
-            for track_id in sub_merge_list:
-                track_id_dict[track_id] = track_new_id
-
-        # add a new field in the track and detection: merged_track_id
-        for track in tracks:
-            if track["track_ID"] in track_id_dict.keys():
-                # track["merge_track_ID"] = track_id_dict[track["track_ID"]]
-                track["track_ID"] = track_id_dict[track["track_ID"]]
-                for det_id in track["det_IDs"]:
-                    # det_dict[det_id]["merge_track_ID"] = track_id_dict[track["track_ID"]]
-                    det_dict[det_id]["track_ID"] = track_id_dict[track["track_ID"]]
-
-        return detections, tracks
+                        merge_range = last_det_idx+frame_gap
+                        new_track["det_IDs"] = new_track["det_IDs"][:merge_range] + track_j["det_IDs"]
+                        new_track["det_or_pred"] = new_track["det_or_pred"][:merge_range] + track_j["det_or_pred"]
+                        # get the last det
+                        for k in range(len(new_track["det_or_pred"])-1, -1, -1):
+                            if new_track["det_or_pred"][k]:
+                                last_det_idx = k
+                                break
+                        last_det_i = det_dict[new_track["det_IDs"][last_det_idx]]
+                        # modify the track ID of the bboxes in a track
+                        for det_ID in new_track["det_IDs"][merge_range:]:
+                            det_dict[det_ID]["track_ID"] = new_track["track_ID"]
+            new_tracks.append(new_track)
+                
+        return detections, new_tracks
 
 
     def NMS_tracks(self, detections, tracks):
