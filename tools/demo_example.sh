@@ -9,4 +9,4 @@
 
 # python demo.py --station KBUF --start 20170816 --end 20170816 --ckpt_path /mnt/nfs/work1/smaji/zezhoucheng/randmo_repo/roost-system/checkpoints/entire_c4_9anchor.pth --data_root /mnt/nfs/work1/smaji/zezhoucheng/randmo_repo/roost-system/roosts_data_0825
 
-python demo.py --station KBUF --start 20170807 --end 20170807 --ckpt_path /mnt/nfs/work1/smaji/zezhoucheng/randmo_repo/roost-system/checkpoints/entire_c4_9anchor.pth --data_root /mnt/nfs/work1/smaji/zezhoucheng/randmo_repo/roost-system/roosts_data_0825
+python demo.py --station KBUF --start 20100801 --end 20100801 --ckpt_path /mnt/nfs/work1/smaji/zezhoucheng/randmo_repo/roost-system/checkpoints/entire_c4_9anchor.pth --data_root /mnt/nfs/work1/smaji/zezhoucheng/randmo_repo/roost-system/roosts_data_0825
