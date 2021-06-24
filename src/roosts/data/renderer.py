@@ -88,7 +88,7 @@ class Renderer:
         self.dualpol_render_config = dualpol_render_config
 
 
-    def render(self, scan_paths, key_prefix, logger):
+    def render(self, scan_paths, key_prefix, logger, force_rendering=False):
 
         npzdir = os.path.join(self.npzdir, key_prefix)
         dz0_5_imgdir = os.path.join(self.dz0_5_imgdir, key_prefix)
@@ -107,7 +107,7 @@ class Renderer:
             npz_path = os.path.join(npzdir, f"{scan}.npz")
             ref1_path = os.path.join(dz0_5_imgdir, f"{scan}.png")
 
-            if os.path.exists(npz_path) and os.path.exists(ref1_path):
+            if os.path.exists(npz_path) and os.path.exists(ref1_path) and not force_rendering:
                 npz_files.append(npz_path)
                 img_files.append(ref1_path)
                 scan_names.append(scan)
