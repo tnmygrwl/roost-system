@@ -10,13 +10,13 @@ from tqdm import tqdm
 class Detector:
 
     def __init__(self, 
-                 ckpt_path,          # path of pretrained detector
-                 imsize = 1200,        # input image size
+                 ckpt_path,             # path of pretrained detector
+                 imsize = 1200,         # input image size
                  anchor_sizes = [[16, 32, 48, 64, 80, 96, 112, 128, 144]],  # predefined anchor sizes
-                 nms_thresh = 0.3,     # non-maximum suppression
-                 score_thresh = 0.005, # filter out detections with score lower than score_thresh
+                 nms_thresh = 0.3,      # non-maximum suppression
+                 score_thresh = 0.1,    # filter out detections with score lower than score_thresh
                  CONFIG_FILE = "COCO-Detection/faster_rcnn_R_50_C4_3x.yaml", # define the detection model
-                 use_gpu = False,      # GPU or CPU
+                 use_gpu = False,       # GPU or CPU
                  ):
 
         cfg = get_cfg()

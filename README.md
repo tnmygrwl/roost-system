@@ -67,14 +67,17 @@ Review the updated AWS config.
 - Enter `localhost:9990` from a local browser tab
 
 #### Run Inference
-In **tools**, modify **launch_demo.py** and run `python launch_demo.py`.
-Modify **demo.py** for more customization when needed. 
-Inference can be accelerated by rendering only useful channels.
+In **tools**, modify **launch_demo.py** and run `python launch_demo.py` 
+to submit jobs to slurm and process multiple batches of data. 
+For additional customization, modify **demo.py**.
+Currently the system renders more channels than needed for detection and tracking; 
+inference could be accelerated by rendering only useful channels.
 
 #### Website Visualization
 In the generated csv files, the following information could be used to further filter the tracks: 
 - track length
-- total/average detection scores (-1 represents the bbox is not from detector, instead, our tracking algorithm)
+- detection scores (-1 represents the bbox is not from detector, instead, our tracking algorithm)
+- bbox sizes
 - the minutes from sunrise of the first bbox in a track
 
 #### Reference

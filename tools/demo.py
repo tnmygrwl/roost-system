@@ -21,10 +21,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--station', type=str, required=True, help="a single station name, eg. KDOX")
 parser.add_argument('--start', type=str, required=True, help="the first day to process, eg. 20101001")
 parser.add_argument('--end', type=str, required=True, help="the last day to process, eg. 20101001")
-parser.add_argument('--ckpt_path', type=str,
+parser.add_argument('--ckpt_path', type=str, help="detection model checkpoint path",
                     default=f"{here}/../checkpoints/entire_c4_9anchor.pth")
-parser.add_argument('--data_root', type=str,
+parser.add_argument('--data_root', type=str, help="directory for all outputs",
                     default=f"{here}/../roosts_data")
+parser.add_argument('--gif_vis', action='store_true', help="generate gif visualization")
+parser.add_argument('--no_ui', action='store_true', help="do not generate files for UI")
 args = parser.parse_args()
 
 ######################## define station and date ############################
@@ -50,6 +52,7 @@ renderer = Renderer(npz_dir, ui_img_dir)
 detector = Detector(
     args.ckpt_path,
     anchor_sizes = [[16, 32, 48, 64, 80, 96, 112, 128, 144]], # [[32], [64], [128], [256], [512]] for FPN
+    score_thresh = 0.1,
     use_gpu = torch.cuda.is_available()
 )
 tracker = Tracker()
@@ -84,6 +87,7 @@ for day_idx, downloader_outputs in enumerate(downloader):
     """
 
     npz_files, img_files, scan_names = renderer.render(scan_paths, key_prefix, logger)
+    station_day = scan_names[0][:12]
     fileUtil.delete_files(scan_paths)
 
     with open(os.path.join(
@@ -121,25 +125,27 @@ for day_idx, downloader_outputs in enumerate(downloader):
     logger.info(f'[Postprocessing Done] {len(cleaned_detections)} cleaned detections')
 
     ######################## (6) Visualize the detection and tracking results  ############################
-    
-    """ visualize detections under multiple thresholds of detection score"""
-    gif_path1 = visualizer.draw_dets_multi_thresh(
-        img_files, copy.deepcopy(detections), os.path.join(vis_det_dir, args.station, year, month)
-    )
 
-    """ visualize results after NMS and merging on tracks"""
-    gif_path2 = visualizer.draw_tracks_multi_thresh(
-        img_files, copy.deepcopy(tracked_detections), copy.deepcopy(tracks),
-        os.path.join(vis_NMS_MERGE_track_dir, args.station, year, month)
-    )
+    # generate gif visualization
+    if args.gif_vis:
+        """ visualize detections under multiple thresholds of detection score"""
+        gif_path1 = visualizer.draw_dets_multi_thresh(
+            img_files, copy.deepcopy(detections), os.path.join(vis_det_dir, args.station, year, month)
+        )
+
+        """ visualize results after NMS and merging on tracks"""
+        gif_path2 = visualizer.draw_tracks_multi_thresh(
+            img_files, copy.deepcopy(tracked_detections), copy.deepcopy(tracks),
+            os.path.join(vis_NMS_MERGE_track_dir, args.station, year, month)
+        )
     
     # generate a website file
-    station_day = scan_names[0][:12]
-    n_existing_tracks = visualizer.generate_web_files(
-        cleaned_detections, tracks, os.path.join(
-            scan_and_track_dir, f'tracks_{args.station}_{args.start}_{args.end}.txt'
-        ), n_existing_tracks=n_existing_tracks
-    )
+    if not args.no_ui:
+        n_existing_tracks = visualizer.generate_web_files(
+            cleaned_detections, tracks, os.path.join(
+                scan_and_track_dir, f'tracks_{args.station}_{args.start}_{args.end}.txt'
+            ), n_existing_tracks=n_existing_tracks
+        )
 
     end_time = time.time()
     logger.info(f'[Finished] running the system on {station_day}; '
