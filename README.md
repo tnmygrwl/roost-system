@@ -78,7 +78,7 @@ In the generated csv files, the following information could be used to further f
 - track length
 - detection scores (-1 represents the bbox is not from detector, instead, our tracking algorithm)
 - bbox sizes
-- the minutes from sunrise of the first bbox in a track
+- the minutes from sunrise/sunset of the first bbox in a track
 
 #### Reference
 [1] [Detecting and Tracking Communal Bird Roosts in Weather Radar Data.](https://people.cs.umass.edu/~zezhoucheng/roosts/radar-roosts-aaai20.pdf)

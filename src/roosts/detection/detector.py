@@ -15,22 +15,22 @@ class Detector:
                  anchor_sizes = [[16, 32, 48, 64, 80, 96, 112, 128, 144]],  # predefined anchor sizes
                  nms_thresh = 0.3,      # non-maximum suppression
                  score_thresh = 0.1,    # filter out detections with score lower than score_thresh
-                 CONFIG_FILE = "COCO-Detection/faster_rcnn_R_50_C4_3x.yaml", # define the detection model
+                 config_file = "COCO-Detection/faster_rcnn_R_50_C4_3x.yaml", # define the detection model
                  use_gpu = False,       # GPU or CPU
-                 ):
+    ):
 
         cfg = get_cfg()
-        cfg.merge_from_file(model_zoo.get_config_file(CONFIG_FILE))
-
+        cfg.merge_from_file(model_zoo.get_config_file(config_file))
+        cfg.INPUT.MIN_SIZE_TEST = imsize
+        cfg.INPUT.MAX_SIZE_TEST = imsize
+        cfg.INPUT.FORMAT = 'BGR'  # just so scan channels are not altered
+        cfg.MODEL.WEIGHTS = ckpt_path
         cfg.MODEL.ANCHOR_GENERATOR.SIZES = anchor_sizes
-        cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [1.0] 
+        cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[1.0]]
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
         cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = score_thresh
         cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = nms_thresh
-        cfg.MODEL.WEIGHTS = ckpt_path
         cfg.MODEL.DEVICE = 'cuda' if use_gpu else 'cpu'
-        cfg.INPUT.MIN_SIZE_TEST = imsize
-        cfg.INPUT.MAX_SIZE_TEST = imsize
 
         self.predictor = DefaultPredictor(cfg)
 
@@ -88,7 +88,6 @@ class Detector:
                 count += 1
                 outputs.append(det)
         return outputs
-
 
 
 if __name__ == "__main__":

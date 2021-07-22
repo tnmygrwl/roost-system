@@ -3,7 +3,7 @@ from datetime import datetime
 import pytz
 from roosts.utils.nexrad_util import NEXRAD_LOCATIONS
 
-def get_sunrise_time(station, input_daytime, silent=True):
+def get_sun_activity_time(station, input_daytime, sun_activity=None, silent=True):
     # Make an observer
     obs = ephem.Observer()
 
@@ -26,6 +26,9 @@ def get_sunrise_time(station, input_daytime, silent=True):
     obs.horizon = '-0:34'
 
     sun = ephem.Sun()
-    sunrise = obs.previous_rising(sun).datetime()
+    sunrise = obs.previous_rising(sun).datetime() if sun_activity in ["sunrise", None] else None
+    sunset = obs.next_setting(sun).datetime() if sun_activity in ["sunset", None] else None
 
-    return sunrise
+    if sun_activity == "sunrise": return sunrise
+    if sun_activity == "sunset": return sunset
+    return sunrise, sunset

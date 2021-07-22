@@ -15,10 +15,11 @@ class Visualizer:
     """
 
 
-    def __init__(self, width=600, height=600):
+    def __init__(self, width=600, height=600, sun_activity=None):
         self.width = width
         self.height = height
-
+        assert sun_activity in ["sunrise", "sunset"]
+        self.sun_activity = sun_activity
 
     def draw_detections(self,
                         image_paths, 
@@ -277,7 +278,7 @@ class Visualizer:
 
         if not os.path.exists(outpath):
             with open(outpath, 'w+') as f:
-                f.write('track_id,filename,from_sunrise,det_score,x,y,r,lon,lat,radius,is_rain\n')
+                f.write(f'track_id,filename,from_{self.sun_activity},det_score,x,y,r,lon,lat,radius,is_rain\n')
                 assert n_existing_tracks == 0
 
         with open(outpath, 'a+') as f:
@@ -302,7 +303,7 @@ class Visualizer:
                     # if (("windfarm" in det.keys()) and det["windfarm"]):
                     #    continue
                     f.write('{:d},{:s},{:d},{:.3f},{:.2f},{:2f},{:2f},{:.2f},{:2f},{:2f}\n'.format(
-                        det["track_ID"]+n_existing_tracks, det["scanname"], int(det["from_sunrise"]),
+                        det["track_ID"]+n_existing_tracks, det["scanname"], int(det[f"from_{self.sun_activity}"]),
                         det["det_score"], det["im_bbox"][0], det["im_bbox"][1], det["im_bbox"][2], 
                         det["geo_bbox"][0], det["geo_bbox"][1], det["geo_bbox"][2]))
                     saved_track = True

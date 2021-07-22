@@ -21,6 +21,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--station', type=str, required=True, help="a single station name, eg. KDOX")
 parser.add_argument('--start', type=str, required=True, help="the first day to process, eg. 20101001")
 parser.add_argument('--end', type=str, required=True, help="the last day to process, eg. 20101001")
+parser.add_argument('--sun_activity', type=str, default="sunrise", help="time window around sunrise or sunset")
+parser.add_argument('--min_before', type=int, default=30,
+                    help="process scans at most these minutes before the selected sun activity")
+parser.add_argument('--min_after', type=int, default=90,
+                    help="process scans at most these minutes after the selected sun activity")
 parser.add_argument('--ckpt_path', type=str, help="detection model checkpoint path",
                     default=f"{here}/../checkpoints/entire_c4_9anchor.pth")
 parser.add_argument('--data_root', type=str, help="directory for all outputs",
@@ -28,6 +33,7 @@ parser.add_argument('--data_root', type=str, help="directory for all outputs",
 parser.add_argument('--gif_vis', action='store_true', help="generate gif visualization")
 parser.add_argument('--no_ui', action='store_true', help="do not generate files for UI")
 args = parser.parse_args()
+print(args)
 
 ######################## define station and date ############################
 request = {"station": args.station, "date": (args.start, args.end)}
@@ -46,20 +52,27 @@ os.makedirs(scan_and_track_dir, exist_ok=True)
 
 
 ######################## Initialize models ############################
-downloader = Downloader(min_before_sunrise=30, min_after_sunrise=90, log_dir=log_root_dir)
+downloader = Downloader(
+    sun_activity=args.sun_activity, min_before=args.min_before, min_after=args.min_after,
+    log_dir=log_root_dir,
+)
 downloader.set_request(request, scan_dir)
 renderer = Renderer(npz_dir, ui_img_dir)
 detector = Detector(
     args.ckpt_path,
+    imsize = 1200,
     anchor_sizes = [[16, 32, 48, 64, 80, 96, 112, 128, 144]], # [[32], [64], [128], [256], [512]] for FPN
+    nms_thresh = 0.3,
     score_thresh = 0.1,
-    use_gpu = torch.cuda.is_available()
+    config_file = "COCO-Detection/faster_rcnn_R_50_C4_3x.yaml",
+    use_gpu = torch.cuda.is_available(),
 )
 tracker = Tracker()
-visualizer = Visualizer()
+visualizer = Visualizer(sun_activity=args.sun_activity)
 postprocess = Postprocess(
     imsize = 600,
     geosize = 300000,
+    sun_activity=args.sun_activity,
     clean_windfarm = True,
     clean_rain = True
 )

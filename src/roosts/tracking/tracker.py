@@ -61,7 +61,7 @@ class Tracker:
                 if det['scanname'] == scan and det['track_ID'] == -1:
                     # start a track
                     # Note: the original implementation only starts a track if the det_score is higher than 0.5 
-                    # and the time from the sunrise is smaller than 30 mins)
+                    # and the time from the sunrise is smaller than 30 mins for bird roosts,
                     # here we init a track regardless the frame time to get higher recall
                     detections[det_idx]['track_ID'] = count_track
                     state_mean = np.array([det['im_bbox'][0],  # x

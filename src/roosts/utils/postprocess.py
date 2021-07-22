@@ -4,7 +4,7 @@ import csv
 import time
 import pickle
 from sklearn.neighbors import NearestNeighbors
-from roosts.utils.geo_util import geo_dist_km, get_roost_coor, sunrise_time
+from roosts.utils.geo_util import geo_dist_km, get_roost_coor, sun_activity_time
 from tqdm import tqdm
 
 
@@ -14,15 +14,18 @@ class Postprocess():
         Populate the detections with geographic information (convert image coordinates to geographic coordinates)
     """
 
-    def __init__(self, 
+    def __init__(self,
                  imsize = 600, 
                  geosize = 300000, # by default, the image size represents 300km
+                 sun_activity = None,
                  clean_windfarm = True,
                  clean_rain = True,
                  ): # this means large y coordinate indicate the North
 
         self.imsize = imsize
         self.geosize = geosize
+        assert sun_activity in ["sunrise", "sunset"]
+        self.sun_activity = sun_activity
         self.clean_windfarm = clean_windfarm
         self.clean_rain = clean_rain
         
@@ -45,13 +48,11 @@ class Postprocess():
             det["geo_bbox"] = [roost_lon, roost_lat, geo_radius]
         return detections
 
-    def add_sunrise_time(self, detections):
-
+    def add_sun_activity_time(self, detections, sun_activity):
         for det in detections:
             scanname = det["scanname"]
             minute = int(scanname[13:15]) * 60 + int(scanname[15:17])
-            from_sunrise = minute - sunrise_time(scanname)
-            det["from_sunrise"] = from_sunrise
+            det[f"from_{sun_activity}"] = minute - sun_activity_time(scanname, sun_activity=sun_activity)
         return detections  # the data should have been modified in place but just be safe
 
     def filter_untracked_dets(self, detections, tracks):
@@ -154,8 +155,8 @@ class Postprocess():
         detections = self.filter_untracked_dets(detections, tracks)
         # convert image coordinates to geometric coordinates
         detections = self.geo_converter(detections)
-        # populate detections with mins from sunrise time
-        detections = self.add_sunrise_time(detections)
+        # populate detections with mins from sunrise/sunset time
+        detections = self.add_sun_activity_time(detections, self.sun_activity)
         # use only tracks after NMS 
         tracks = [t for t in tracks if not t["NMS_suppressed"]]
 

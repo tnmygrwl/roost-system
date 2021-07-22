@@ -4,28 +4,25 @@ import logging
 import time
 from datetime import datetime, timedelta
 from botocore.exceptions import ClientError
-from roosts.utils.sunrise_util import get_sunrise_time
+from roosts.utils.sun_activity_util import get_sun_activity_time
 from roosts.utils.s3_util import get_station_day_scan_keys, download_scans
 import roosts.utils.file_util as fileUtil
 from tqdm import tqdm
 
 
-def format_time(start_date_string, end_date_string):
-    # INPUT: yyyymmdd, yyyymmdd
+def format_time(date_string):
+    # INPUT: yyyymmdd
     # OUTPUT: datetime objects indicating noon of the day without time zone info
-    year1 = int(start_date_string[:4])
-    month1 = int(start_date_string[4:6])
-    day1 = int(start_date_string[6:])
-    year2 = int(end_date_string[:4])
-    month2 = int(end_date_string[4:6])
-    day2 = int(end_date_string[6:])
-    start_date = datetime(year1, month1, day1, 12, 0)
-    end_date = datetime(year2, month2, day2, 12, 0)
-    return start_date, end_date
+    year = int(date_string[:4])
+    month = int(date_string[4:6])
+    day = int(date_string[6:])
+    formatted_date = datetime(year, month, day, 12, 0)
+    return formatted_date
 
 
 def get_days_list(start_date_str, end_date_str):
-    start_date, end_date = format_time(start_date_str, end_date_str)
+    start_date = format_time(start_date_str)
+    end_date = format_time(end_date_str)
     days = []
     current_date = start_date
     while current_date <= end_date:
@@ -41,9 +38,13 @@ class Downloader:
         in a daily basis. Station-day is the minimum unit of tracking roosts.
     """
 
-    def __init__(self, min_before_sunrise, min_after_sunrise, log_dir):
-        self.min_before_sunrise = min_before_sunrise
-        self.min_after_sunrise = min_after_sunrise
+    def __init__(
+            self, sun_activity, min_before, min_after, log_dir,
+    ):
+        assert sun_activity in ["sunrise", "sunset"]
+        self.sun_activity = sun_activity
+        self.min_before = min_before
+        self.min_after = min_after
         self.log_dir = log_dir
 
 
@@ -96,9 +97,9 @@ class Downloader:
         logger.setLevel(logging.DEBUG)
         logger.addHandler(filelog)
 
-        sunrise = get_sunrise_time(self.station, current_date)
-        start_time = sunrise - timedelta(minutes=self.min_before_sunrise)
-        end_time = sunrise + timedelta(minutes=self.min_after_sunrise)
+        sun_activity_time = get_sun_activity_time(self.station, current_date, sun_activity=self.sun_activity)
+        start_time = sun_activity_time - timedelta(minutes=self.min_before)
+        end_time = sun_activity_time + timedelta(minutes=self.min_after)
 
         keys = get_station_day_scan_keys(start_time, end_time, self.station)
         keys = sorted(list(set(keys))) # aws keys
