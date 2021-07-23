@@ -63,7 +63,7 @@ for args in ARGS:
     --ntasks=1 \
     --cpus-per-task={NUM_CPUS} \
     --mem-per-cpu=2000 \
-    --partition=defq \
+    --partition=longq \
     --time=12:00:00 \
     demo.sbatch \
     --station {station} --start {start} --end {end} \

@@ -10,7 +10,7 @@ SUN_ACTIVITY = "sunset"
 MIN_BEFORE = 20
 MIN_AFTER = 60
 # directory for system outputs
-EXPERIMENT_NAME = "bat" # "c4"
+EXPERIMENT_NAME = "bat" # all_station_v1
 DATA_ROOT = f"/mnt/nfs/scratch1/wenlongzhao/roosts_data/{EXPERIMENT_NAME}"
 
 

@@ -104,9 +104,7 @@ def get_station_day_scan_keys(start_time, end_time, station, stride_in_minutes=3
     objects = bucket.objects.filter(Prefix=prefix)
 
     # Select keys that fall between our start and end time
-    keys = [o.key for o in objects
-                if o.key >= start_key
-                and o.key <= end_key]
+    keys = [o.key for o in objects if o.key >= start_key and o.key <= end_key]
     if not keys:
         return []
 

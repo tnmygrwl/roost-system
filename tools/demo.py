@@ -1,6 +1,6 @@
 import os
 import torch
-print("torch.get_num_threads: ", torch.get_num_threads())
+print(f"torch.get_num_threads: {torch.get_num_threads()}", flush=True)
 from roosts.data.downloader import Downloader
 from roosts.data.renderer import Renderer
 from roosts.detection.detector import Detector
@@ -33,7 +33,7 @@ parser.add_argument('--data_root', type=str, help="directory for all outputs",
 parser.add_argument('--gif_vis', action='store_true', help="generate gif visualization")
 parser.add_argument('--no_ui', action='store_true', help="do not generate files for UI")
 args = parser.parse_args()
-print(args)
+print(args, flush=True)
 
 ######################## define station and date ############################
 request = {"station": args.station, "date": (args.start, args.end)}
@@ -80,8 +80,7 @@ n_existing_tracks = 0
 
 
 ######################## process radar data ############################
-print("Total number of days: %d" % len(downloader))
-print(f"---------------------- Day 1 -----------------------\n")
+print("Total number of days: %d" % len(downloader), flush=True)
 
 ######################## (1) Download data ############################
 for day_idx, downloader_outputs in enumerate(downloader):
@@ -89,8 +88,9 @@ for day_idx, downloader_outputs in enumerate(downloader):
     if downloader_outputs is StopIteration:
         break
     else:
-        scan_paths, start_time, key_prefix, logger = downloader_outputs
+        date_string, key_prefix, logger, scan_paths, start_time = downloader_outputs
         year, month, _, _ = key_prefix.split("/")
+        print(f"-------------------- Day {day_idx+1}: {date_string} --------------------\n", flush=True)
 
     ######################## (2) Render data ############################
     """
@@ -100,7 +100,6 @@ for day_idx, downloader_outputs in enumerate(downloader):
     """
 
     npz_files, img_files, scan_names = renderer.render(scan_paths, key_prefix, logger)
-    station_day = scan_names[0][:12]
     fileUtil.delete_files(scan_paths)
 
     with open(os.path.join(
@@ -109,9 +108,10 @@ for day_idx, downloader_outputs in enumerate(downloader):
         f.writelines([scan_name + "\n" for scan_name in scan_names])
 
     if len(npz_files) == 0:
-        print()
-        if day_idx + 2 <= len(downloader):
-            print(f"---------------------- Day {day_idx + 2} -----------------------\n")
+        end_time = time.time()
+        logger.info(f'[Passed] no successfully rendered scan for {args.station} {date_string}; '
+                    f'total time elapse: {end_time - start_time}')
+        print(f"No successfully rendered scan.\nTotal time elapse: {end_time - start_time}\n", flush=True)
         continue
 
     ######################## (3) Run detection models on the data ############################
@@ -161,11 +161,7 @@ for day_idx, downloader_outputs in enumerate(downloader):
         )
 
     end_time = time.time()
-    logger.info(f'[Finished] running the system on {station_day}; '
+    logger.info(f'[Finished] running the system for {args.station} {date_string}; '
                 f'total time elapse: {end_time - start_time}')
-
-    print("Total time elapse: {}".format(end_time - start_time))
-    print()
-    if day_idx + 2 <= len(downloader):
-        print(f"-------------------- Day {day_idx + 2} --------------------\n")
+    print(f"Total time elapse: {end_time - start_time}\n", flush=True)
 

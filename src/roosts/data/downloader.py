@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 def format_time(date_string):
     # INPUT: yyyymmdd
-    # OUTPUT: datetime objects indicating noon of the day without time zone info
+    # OUTPUT: datetime objects indicating noon of the days without time zone info
     year = int(date_string[:4])
     month = int(date_string[4:6])
     day = int(date_string[6:])
@@ -22,10 +22,10 @@ def format_time(date_string):
 
 def get_days_list(start_date_str, end_date_str):
     start_date = format_time(start_date_str)
-    end_date = format_time(end_date_str)
+    end_date = format_time(end_date_str) + timedelta(days=1) # right exclusive
     days = []
     current_date = start_date
-    while current_date <= end_date:
+    while current_date < end_date:
         days.append(current_date)
         current_date += timedelta(days=1)
     return days
@@ -48,7 +48,7 @@ class Downloader:
         self.log_dir = log_dir
 
 
-    def set_request(self, request, outdir):
+    def set_request(self, request, output_dir):
         """ 
             index: the current index 
             request: {"station": "KDOX", "date": (start_date, end_date)}
@@ -60,8 +60,8 @@ class Downloader:
         self.num_days = len(self.days)
 
         # scan path
-        self.outdir = outdir
-        os.makedirs(self.outdir, exist_ok = True)
+        self.output_dir = output_dir
+        os.makedirs(self.output_dir, exist_ok = True)
 
 
     def __iter__(self):
@@ -76,19 +76,24 @@ class Downloader:
         start_time = time.time()
         if self.index == self.num_days:
             return StopIteration
-        scan_paths, key_prefix, logger = self.download_scans(self.days[self.index])
+        date_string, key_prefix, logger, scan_paths = self.download_scans(self.days[self.index])
         self.index = self.index + 1
-        return scan_paths, start_time, key_prefix, logger
+        return date_string, key_prefix, logger, scan_paths, start_time
 
 
     def download_scans(self, current_date):
         """ Download radar scans from AWS """
-        scan_paths = [] # list of the file path of downloaded scans
 
-        key_prefix = os.path.join(current_date.strftime('%Y/%m/%d'), self.station)
+        date_string = current_date.strftime('%Y%m%d') # yyyymmdd
+        key_prefix = os.path.join(
+            current_date.strftime('%Y'),
+            current_date.strftime('%m'),
+            current_date.strftime('%d'),
+            self.station
+        ) # yyyy/mm/dd/ssss
         log_dir = os.path.join(self.log_dir, self.station, current_date.strftime('%Y'))
         os.makedirs(log_dir, exist_ok=True)
-        log_path = os.path.join(log_dir, f"{self.station}_{current_date.strftime('%Y%m%d')}.log")
+        log_path = os.path.join(log_dir, f"{self.station}_{date_string}.log")
         logger = logging.getLogger(key_prefix)
         filelog = logging.FileHandler(log_path)
         formatter = logging.Formatter('%(asctime)s : %(message)s')
@@ -100,25 +105,26 @@ class Downloader:
         sun_activity_time = get_sun_activity_time(self.station, current_date, sun_activity=self.sun_activity)
         start_time = sun_activity_time - timedelta(minutes=self.min_before)
         end_time = sun_activity_time + timedelta(minutes=self.min_after)
-
         keys = get_station_day_scan_keys(start_time, end_time, self.station)
         keys = sorted(list(set(keys))) # aws keys
+
+        scan_paths = [] # list of the file path of downloaded scans
         for key in tqdm(keys, desc="Downloading"):
             try:
-                filepath = download_scans([key], self.outdir)
+                filepath = download_scans([key], self.output_dir)
                 scan_paths.append(filepath)
                 logger.info('[Download Success] scan %s' % key.split("/")[-1])
             except Exception as ex:
                 logger.error('[Download Failure] scan %s - %s' % (key.split("/")[-1], str(ex)))
 
-        return scan_paths, key_prefix, logger
+        return date_string, key_prefix, logger, scan_paths
 
 
 if __name__ == "__main__":
     
     request = {"station": "KDOX", "date": ("20210527", "20210527")}
-    outdir = './scans'
-    downloader = Downloader(request, outdir)
+    output_dir = './scans'
+    downloader = Downloader(request, output_dir)
     print(len(downloader))
     for scan_paths in downloader:
         if type(scan_paths) in (list,):
