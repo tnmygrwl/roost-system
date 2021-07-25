@@ -80,7 +80,7 @@ class Renderer:
                  array_render_config=ARRAY_RENDER_CONFIG, 
                  dualpol_render_config=DUALPOL_RENDER_CONFIG):
 
-        self.npzdir = npz_dir
+        self.npz_dir = npz_dir
         self.dz0_5_imgdir = os.path.join(ui_img_dir, 'dz05')
         self.vr0_5_imgdir = os.path.join(ui_img_dir, 'vr05')
         self.imgdirs = {("reflectivity", 0.5): self.dz0_5_imgdir, ("velocity", 0.5): self.vr0_5_imgdir}
@@ -88,12 +88,12 @@ class Renderer:
         self.dualpol_render_config = dualpol_render_config
 
 
-    def render(self, scan_paths, key_prefix, logger, force_rendering=False):
+    def render(self, scan_paths, date_station_prefix, logger, force_rendering=False):
 
-        npzdir = os.path.join(self.npzdir, key_prefix)
-        dz0_5_imgdir = os.path.join(self.dz0_5_imgdir, key_prefix)
-        vr0_5_imgdir = os.path.join(self.vr0_5_imgdir, key_prefix)
-        os.makedirs(npzdir, exist_ok = True)
+        npz_dir = os.path.join(self.npz_dir, date_station_prefix)
+        dz0_5_imgdir = os.path.join(self.dz0_5_imgdir, date_station_prefix)
+        vr0_5_imgdir = os.path.join(self.vr0_5_imgdir, date_station_prefix)
+        os.makedirs(npz_dir, exist_ok = True)
         os.makedirs(dz0_5_imgdir, exist_ok = True)
         os.makedirs(vr0_5_imgdir, exist_ok = True)
 
@@ -104,7 +104,7 @@ class Renderer:
         for scan_file in tqdm(scan_paths, desc="Rendering"):
             
             scan = os.path.splitext(os.path.basename(scan_file))[0]
-            npz_path = os.path.join(npzdir, f"{scan}.npz")
+            npz_path = os.path.join(npz_dir, f"{scan}.npz")
             ref1_path = os.path.join(dz0_5_imgdir, f"{scan}.png")
 
             if os.path.exists(npz_path) and os.path.exists(ref1_path) and not force_rendering:
@@ -137,7 +137,7 @@ class Renderer:
 
             if len(arrays) > 0:
                 np.savez_compressed(npz_path, **arrays)
-                self.render_img(arrays["array"], key_prefix, scan) # render ref1 and rv1 images
+                self.render_img(arrays["array"], date_station_prefix, scan) # render ref1 and rv1 images for ui
                 npz_files.append(npz_path)
                 img_files.append(ref1_path)
                 scan_names.append(scan)
@@ -145,14 +145,13 @@ class Renderer:
         return npz_files, img_files, scan_names
 
 
-    def render_img(self, array, key_prefix, scan):
-        # input: numpy array containing radar products
+    def render_img(self, array, date_station_prefix, scan):
         attributes = self.array_render_config['fields']
         elevations = self.array_render_config['elevs']
         for attr, elev in self.imgdirs:
             cm = plt.get_cmap(pyart.config.get_field_colormap(attr))
             rgb = cm(NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :]))
             rgb = rgb[::-1, :, :3]  # flip the y axis; omit the fourth alpha dimension, NAN are black but not white
-            image.imsave(os.path.join(self.imgdirs[(attr, elev)], key_prefix, f"{scan}.png"), rgb)
+            image.imsave(os.path.join(self.imgdirs[(attr, elev)], date_station_prefix, f"{scan}.png"), rgb)
 
 

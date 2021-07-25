@@ -76,16 +76,16 @@ class Downloader:
         start_time = time.time()
         if self.index == self.num_days:
             return StopIteration
-        date_string, key_prefix, logger, scan_paths = self.download_scans(self.days[self.index])
+        date_string, date_station_predix, logger, scan_paths = self.download_scans(self.days[self.index])
         self.index = self.index + 1
-        return date_string, key_prefix, logger, scan_paths, start_time
+        return date_string, date_station_predix, logger, scan_paths, start_time
 
 
     def download_scans(self, current_date):
         """ Download radar scans from AWS """
 
         date_string = current_date.strftime('%Y%m%d') # yyyymmdd
-        key_prefix = os.path.join(
+        date_station_predix = os.path.join(
             current_date.strftime('%Y'),
             current_date.strftime('%m'),
             current_date.strftime('%d'),
@@ -94,7 +94,7 @@ class Downloader:
         log_dir = os.path.join(self.log_dir, self.station, current_date.strftime('%Y'))
         os.makedirs(log_dir, exist_ok=True)
         log_path = os.path.join(log_dir, f"{self.station}_{date_string}.log")
-        logger = logging.getLogger(key_prefix)
+        logger = logging.getLogger(date_station_predix)
         filelog = logging.FileHandler(log_path)
         formatter = logging.Formatter('%(asctime)s : %(message)s')
         formatter.converter = time.gmtime
@@ -117,7 +117,7 @@ class Downloader:
             except Exception as ex:
                 logger.error('[Download Failure] scan %s - %s' % (key.split("/")[-1], str(ex)))
 
-        return date_string, key_prefix, logger, scan_paths
+        return date_string, date_station_predix, logger, scan_paths
 
 
 if __name__ == "__main__":

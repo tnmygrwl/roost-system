@@ -88,8 +88,8 @@ for day_idx, downloader_outputs in enumerate(downloader):
     if downloader_outputs is StopIteration:
         break
     else:
-        date_string, key_prefix, logger, scan_paths, start_time = downloader_outputs
-        year, month, _, _ = key_prefix.split("/")
+        date_string, date_station_prefix, logger, scan_paths, start_time = downloader_outputs
+        year, month, _, _ = date_station_prefix.split("/")
         print(f"-------------------- Day {day_idx+1}: {date_string} --------------------\n", flush=True)
 
     ######################## (2) Render data ############################
@@ -99,7 +99,7 @@ for day_idx, downloader_outputs in enumerate(downloader):
         scan_names: for tracking module to know the full image set
     """
 
-    npz_files, img_files, scan_names = renderer.render(scan_paths, key_prefix, logger)
+    npz_files, img_files, scan_names = renderer.render(scan_paths, date_station_prefix, logger)
     fileUtil.delete_files(scan_paths)
 
     with open(os.path.join(

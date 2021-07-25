@@ -2,10 +2,7 @@ import boto3
 import botocore
 from datetime import datetime, timedelta
 import re
-import os.path
-import errno    
 import os
-import sys
 
 ####################################
 # Helpers
@@ -76,16 +73,7 @@ def parse_key(key):
     vals = re.match('(\w{4})(\d{4}\d{2}\d{2}_\d{2}\d{2}\d{2})(\.?\w+)', key)
     (station, timestamp, suffix) = vals.groups()
     t = datetime.strptime(timestamp, '%Y%m%d_%H%M%S')
-    return t, station    
-
-def mkdir_p(path):
-    try:
-        os.makedirs(path)
-    except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
-            raise
+    return t, station
 
 
 ####################################
@@ -96,15 +84,17 @@ darkecology_bucket = boto3.resource('s3', region_name='us-east-2').Bucket('cajun
 
 def get_station_day_scan_keys(start_time, end_time, station, stride_in_minutes=3, thresh_in_minutes=3):
 
-    prefix = s3_prefix(start_time, station)
     start_key = s3_key(start_time, station)
     end_key = s3_key(end_time, station)
 
-    # Get s3 objects for this day
-    objects = bucket.objects.filter(Prefix=prefix)
+    keys = []
+    current_time = start_time
+    while current_time < end_time + timedelta(days=1):
+        prefix = s3_prefix(current_time, station)
+        objects = bucket.objects.filter(Prefix=prefix)
+        keys.extend([o.key for o in objects if o.key >= start_key and o.key <= end_key])
+        current_time = current_time + timedelta(days=1)
 
-    # Select keys that fall between our start and end time
-    keys = [o.key for o in objects if o.key >= start_key and o.key <= end_key]
     if not keys:
         return []
 
@@ -134,8 +124,8 @@ def download_scans(keys, data_dir):
     for key in keys:
         # Download files
         local_file = os.path.join(data_dir, key)
-        local_path, filename = os.path.split(local_file)
-        mkdir_p(local_path)
+        local_dir, filename = os.path.split(local_file)
+        os.makedirs(local_dir, exist_ok=True)
 
         # Download file if we don't already have it
         if not os.path.isfile(local_file):

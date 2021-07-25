@@ -7,9 +7,11 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
 - **checkpoints** is for trained model checkpoints
 - **src** is for system implementation
     - **data**
-        - **downloader** downloads radar scans based on station and day
+        - **downloader** downloads radar scans based on station and day; 
+        scan keys and directories for downloaded scans are based on UTC dates
         - **renderer** renders numpy arrays from downloaded scans, visualizes arrays, 
-        and deletes the scans after rendering
+        and deletes the scans after rendering; 
+        directories for rendered arrays are based on local dates
     - **detection**
     - **tracking**
     - **utils** contains various utils, scripts to postprocess roost tracks, and scripts to generate visualization
