@@ -28,9 +28,9 @@ for file in os.listdir(DIR):
     lines = [line.strip() for line in open(os.path.join(DIR, file), "r").readlines()]
 
     if file.startswith("scans"):
-        open(os.path.join(DIR, file), "w").writelines(
-            [f"{line},{key_to_local_time(line)}\n" for line in lines]
-        )
+        with open(os.path.join(DIR, file), "w") as f:
+            f.writelines(["filename,local_time\n"])
+            f.writelines([f"{line},{key_to_local_time(line)}\n" for line in lines])
 
     elif file.startswith("tracks"):
         with open(os.path.join(DIR, file), "w") as f:
