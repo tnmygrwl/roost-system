@@ -1,5 +1,4 @@
 import os
-import pytz
 import logging
 import time
 from datetime import datetime, timedelta

@@ -20,6 +20,7 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
     roosts in them, and postprocesses the results 
     - **launch_demo.py** is a modifiable template that submits **demo.sbatch** to servers with slurm management
     - **demo.ipynb** is for interactively running the system
+    - **utc_to_local_time.py** takes in web ui files and append local time to each line
 
 #### Installation and Preparation
 1. Installation. Compatible PyTorch version can be found [here](https://pytorch.org/get-started/previous-versions/) 
@@ -72,6 +73,8 @@ Review the updated AWS config.
 In **tools**, modify **launch_demo.py** and run `python launch_demo.py` 
 to submit jobs to slurm and process multiple batches of data. 
 For additional customization, modify **demo.py**.
+If we'd like to group scans and tracks based on local time instead of utc in the web ui, 
+run **utc_to_local_time.py** to append local time to the web ui files.
 Currently the system renders more channels than needed for detection and tracking; 
 inference could be accelerated by rendering only useful channels.
 
