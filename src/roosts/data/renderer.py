@@ -151,7 +151,9 @@ class Renderer:
         for attr, elev in self.imgdirs:
             cm = plt.get_cmap(pyart.config.get_field_colormap(attr))
             rgb = cm(NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :]))
-            rgb = rgb[::-1, :, :3]  # flip the y axis; omit the fourth alpha dimension, NAN are black but not white
+            rgb = rgb[::-1, :, :3]
+                # flip the y axis, from geographical (big y means North) to image (big y means lower)
+                # omit the fourth alpha dimension, NAN are black but not white
             image.imsave(os.path.join(self.imgdirs[(attr, elev)], date_station_prefix, f"{scan}.png"), rgb)
 
 

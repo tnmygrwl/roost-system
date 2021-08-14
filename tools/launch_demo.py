@@ -3,40 +3,20 @@ import time
 
 NUM_CPUS = 7
 # station, start date (inclusive), end date (inclusive)
-# ARGS = [
-#     ("KTYX", "20160803", "20160804"),
-#     ("KBUF", "20180109", "20180109"),
-#     ("KBUF", "20180123", "20180123"),
-#     ("KDOX", "20081002", "20081002"),
-#     ("KDOX", "20081010", "20081010")
-# ]
 # greatlakes_test
-# ARGS = [
-#     ("KBUF", "20100201", "20100331"),
-#     ("KBUF", "20100801", "20100930"),
-#     ("KBUF", "20170201", "20170331"),
-#     ("KBUF", "20170801", "20170930"),
-#     ("KCLE", "20100201", "20100331"),
-#     ("KCLE", "20100801", "20100930"),
-#     ("KCLE", "20170201", "20170331"),
-#     ("KCLE", "20170801", "20170930"),
-#     ("KTYX", "20100201", "20100331"),
-#     ("KTYX", "20100801", "20100930"),
-#     ("KTYX", "20170201", "20170331"),
-#     ("KTYX", "20170801", "20170930"),
-# ]
+STATIONS = ["KBUF", "KCLE", "KTYX"]
+TIMES = [("20100201", "20100331"), ("20100801", "20100930"),
+         ("20170201", "20170331"), ("20170801", "20170930"),]
 # deployment
-STATIONS = ["KCLE", "KBUF", "KTYX", "KGRB", "KMQT", "KMKX",
-            "KLOT", "KIWX", "KGRR", "KAPX", "KDTX", "KDLH"]
-TIMES = [("20100101", "20100331"), ("20100401", "20100630"),
-         ("20100701", "20100930"), ("20101001", "20101231"),
-         ("20200101", "20200331"), ("20200401", "20200630"),
-         ("20200701", "20200930"), ("20201001", "20201231"),]
+# STATIONS = ["KCLE", "KBUF", "KTYX", "KGRB", "KMQT", "KMKX",
+#             "KLOT", "KIWX", "KGRR", "KAPX", "KDTX", "KDLH",]
+# TIMES = [("20190601", "20191231"), ("20180601", "20181231"),
+#          ("20170601", "20171231"), ("20160601", "20161231"),]
 SUN_ACTIVITY = "sunrise"
 MIN_BEFORE = 30
 MIN_AFTER = 90
 # directory for system outputs
-EXPERIMENT_NAME = "all_stations_v1" # "c4"
+EXPERIMENT_NAME = "greatlakes_test_exp07_det01"
 DATA_ROOT = f"/mnt/nfs/scratch1/wenlongzhao/roosts_data/{EXPERIMENT_NAME}"
 
 
@@ -64,7 +44,7 @@ for args in ARGS:
     --cpus-per-task={NUM_CPUS} \
     --mem-per-cpu=2000 \
     --partition=longq \
-    --time=12:00:00 \
+    --time=2-00:00:00 \
     demo.sbatch \
     --station {station} --start {start} --end {end} \
     --sun_activity {SUN_ACTIVITY} --min_before {MIN_BEFORE} --min_after {MIN_AFTER} \

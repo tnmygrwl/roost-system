@@ -179,7 +179,7 @@ class Postprocess():
                 for det_ID in track["det_IDs"]:
                     det_dict[det_ID]["windfarm"] = flag
 
-        # clean up the windfarms using dualpol
+        # clean up rain using dualpol
         if self.clean_rain:
             dualpol_data = {}
             for scanname, npz_file in scan_dict.items():

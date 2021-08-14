@@ -26,14 +26,24 @@ parser.add_argument('--min_before', type=int, default=30,
                     help="process scans at most these minutes before the selected sun activity")
 parser.add_argument('--min_after', type=int, default=90,
                     help="process scans at most these minutes after the selected sun activity")
-parser.add_argument('--ckpt_path', type=str, help="detection model checkpoint path",
-                    default=f"{here}/../checkpoints/entire_c4_9anchor.pth")
 parser.add_argument('--data_root', type=str, help="directory for all outputs",
                     default=f"{here}/../roosts_data")
 parser.add_argument('--gif_vis', action='store_true', help="generate gif visualization")
 parser.add_argument('--no_ui', action='store_true', help="do not generate files for UI")
 args = parser.parse_args()
 print(args, flush=True)
+
+######################## DETECTION MODEL CONFIG ############################
+CKPT_PATH = f"{here}/../checkpoints/3.2_exp07_resnet101-FPN_detptr_anc10.pth"
+IMSIZE = 1200
+ANCHOR_SIZES = [[16, 18, 20, 22, 24, 26, 28, 30, 32],
+                [32, 36, 40, 44, 48, 52, 56, 60, 64],
+                [64, 72, 80, 88, 96, 104, 112, 120, 128],
+                [128, 144, 160, 176, 192, 208, 224, 240, 256],
+                [256, 288, 320, 352, 384, 416, 448, 480, 512]]
+NMS_THRESH = 0.3
+SCORE_THRESH = 0.1
+CONFIG_FILE = "COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml"
 
 ######################## define station and date ############################
 request = {"station": args.station, "date": (args.start, args.end)}
@@ -59,12 +69,12 @@ downloader = Downloader(
 downloader.set_request(request, scan_dir)
 renderer = Renderer(npz_dir, ui_img_dir)
 detector = Detector(
-    args.ckpt_path,
-    imsize = 1200,
-    anchor_sizes = [[16, 32, 48, 64, 80, 96, 112, 128, 144]], # [[32], [64], [128], [256], [512]] for FPN
-    nms_thresh = 0.3,
-    score_thresh = 0.1,
-    config_file = "COCO-Detection/faster_rcnn_R_50_C4_3x.yaml",
+    CKPT_PATH,
+    imsize = IMSIZE,
+    anchor_sizes = ANCHOR_SIZES,
+    nms_thresh = NMS_THRESH,
+    score_thresh = SCORE_THRESH,
+    config_file = CONFIG_FILE,
     use_gpu = torch.cuda.is_available(),
 )
 tracker = Tracker()

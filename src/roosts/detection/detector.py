@@ -10,13 +10,13 @@ from tqdm import tqdm
 class Detector:
 
     def __init__(self, 
-                 ckpt_path,             # path of pretrained detector
-                 imsize = 1200,         # input image size
-                 anchor_sizes = [[16, 32, 48, 64, 80, 96, 112, 128, 144]],  # predefined anchor sizes
-                 nms_thresh = 0.3,      # non-maximum suppression
-                 score_thresh = 0.1,    # filter out detections with score lower than score_thresh
-                 config_file = "COCO-Detection/faster_rcnn_R_50_C4_3x.yaml", # define the detection model
-                 use_gpu = False,       # GPU or CPU
+                 ckpt_path,         # path of pretrained detector
+                 imsize,            # input image size
+                 anchor_sizes,      # predefined anchor sizes
+                 nms_thresh,        # non-maximum suppression
+                 score_thresh,      # filter out detections with score lower than score_thresh
+                 config_file,       # define the detection model
+                 use_gpu,           # GPU or CPU
     ):
 
         cfg = get_cfg()
@@ -28,8 +28,8 @@ class Detector:
         cfg.MODEL.ANCHOR_GENERATOR.SIZES = anchor_sizes
         cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[1.0]]
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
-        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = score_thresh
         cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = nms_thresh
+        cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = score_thresh
         cfg.MODEL.DEVICE = 'cuda' if use_gpu else 'cpu'
 
         self.predictor = DefaultPredictor(cfg)
@@ -75,7 +75,8 @@ class Detector:
             bbox       = prediction.pred_boxes.tensor.cpu().numpy()
             H, W       = prediction.image_size
             centers    = prediction.pred_boxes.get_centers().cpu().numpy()
-            centers[:, 1] = H - centers[:, 1] # flip the y direction
+            centers[:, 1] = H - centers[:, 1]
+                # flip the y axis, from geographical (big y means North) to image (big y means lower)
             radius     = ((bbox[:, 2] - bbox[:, 0]) + (bbox[:, 3] - bbox[:, 1])) / 4.
             radius     = radius[:, np.newaxis]
             bbox_xyr   = np.hstack((centers, radius))

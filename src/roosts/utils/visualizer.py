@@ -278,7 +278,7 @@ class Visualizer:
 
         if not os.path.exists(outpath):
             with open(outpath, 'w+') as f:
-                f.write(f'track_id,filename,from_{self.sun_activity},det_score,x,y,r,lon,lat,radius,is_rain\n')
+                f.write(f'track_id,filename,from_{self.sun_activity},det_score,x,y,r,lon,lat,radius\n')
                 assert n_existing_tracks == 0
 
         with open(outpath, 'a+') as f:

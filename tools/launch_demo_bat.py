@@ -4,13 +4,17 @@ import time
 NUM_CPUS = 7
 # station, start date (inclusive), end date (inclusive)
 # deployment
-STATIONS = ["KEWX"]
-TIMES = [("20160320", "20161130"), ("20170320", "20171130"),]
+STATIONS = ["KBBX", "KDAX", "KBYX", "KAMX"]
+TIMES = [("20000501", "20000531"),
+         ("20050501", "20050531"),
+         ("20100501", "20100531"),
+         ("20150501", "20150531"),
+         ("20200501", "20200531"),]
 SUN_ACTIVITY = "sunset"
-MIN_BEFORE = 20
+MIN_BEFORE = 30
 MIN_AFTER = 60
 # directory for system outputs
-EXPERIMENT_NAME = "bat" # all_station_v1
+EXPERIMENT_NAME = "clutter" # all_station_v1
 DATA_ROOT = f"/mnt/nfs/scratch1/wenlongzhao/roosts_data/{EXPERIMENT_NAME}"
 
 
@@ -37,8 +41,8 @@ for args in ARGS:
     --ntasks=1 \
     --cpus-per-task={NUM_CPUS} \
     --mem-per-cpu=2000 \
-    --partition=longq \
-    --time=2-00:00:00 \
+    --partition=defq \
+    --time=12:00:00 \
     demo.sbatch \
     --station {station} --start {start} --end {end} \
     --sun_activity {SUN_ACTIVITY} --min_before {MIN_BEFORE} --min_after {MIN_AFTER} \
