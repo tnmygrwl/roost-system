@@ -11,10 +11,10 @@ def datetime_range(start=None, end=None, delta=timedelta(minutes=1), inclusive=T
     """Construct a generator for a range of dates
     
     Args:
-        from_date (datetime): start time
-        to_date (datetime): end time
+        start (datetime): start time
+        end (datetime): end time
         delta (timedelta): time increment
-        inclusive (bool): whether to include the 
+        inclusive (bool): whether to include the end date
     
     Returns:
         Generator object
@@ -39,7 +39,7 @@ def s3_key(t, station):
         station (string): station identifier
 
     Returns:
-        string: s3 key, excluding version string suffic
+        string: s3 key, excluding version string suffix
         
     Example format:
             s3 key: 2015/05/02/KMPX/KMPX20150502_021525_V06.gz
@@ -120,15 +120,10 @@ def get_station_day_scan_keys(start_time, end_time, station, stride_in_minutes=3
     return selected_keys
 
 
-def download_scans(keys, data_dir):
-    for key in keys:
-        # Download files
-        local_file = os.path.join(data_dir, key)
-        local_dir, filename = os.path.split(local_file)
-        os.makedirs(local_dir, exist_ok=True)
+def download_scan(key, data_dir):
+    local_file = os.path.join(data_dir, key)
+    local_dir, filename = os.path.split(local_file)
+    os.makedirs(local_dir, exist_ok=True)
 
-        # Download file if we don't already have it
-        if not os.path.isfile(local_file):
-            bucket.download_file(key, local_file)
-
-    return local_file
+    if not os.path.isfile(local_file):
+        bucket.download_file(key, local_file)

@@ -76,10 +76,11 @@ class Renderer:
     """
 
     def __init__(self, 
-                 npz_dir, ui_img_dir,
+                 download_dir, npz_dir, ui_img_dir,
                  array_render_config=ARRAY_RENDER_CONFIG, 
                  dualpol_render_config=DUALPOL_RENDER_CONFIG):
 
+        self.download_dir = download_dir
         self.npz_dir = npz_dir
         self.dz0_5_imgdir = os.path.join(ui_img_dir, 'dz05')
         self.vr0_5_imgdir = os.path.join(ui_img_dir, 'vr05')
@@ -88,22 +89,29 @@ class Renderer:
         self.dualpol_render_config = dualpol_render_config
 
 
-    def render(self, scan_paths, date_station_prefix, logger, force_rendering=False):
-
-        npz_dir = os.path.join(self.npz_dir, date_station_prefix)
-        dz0_5_imgdir = os.path.join(self.dz0_5_imgdir, date_station_prefix)
-        vr0_5_imgdir = os.path.join(self.vr0_5_imgdir, date_station_prefix)
-        os.makedirs(npz_dir, exist_ok = True)
-        os.makedirs(dz0_5_imgdir, exist_ok = True)
-        os.makedirs(vr0_5_imgdir, exist_ok = True)
+    def render(self, keys, logger, force_rendering=False):
 
         npz_files = [] # for detection module to load/preprocess data
         img_files = [] # for visualization
         scan_names = [] # for tracking module to know the full image set
 
-        for scan_file in tqdm(scan_paths, desc="Rendering"):
+        for key in tqdm(keys, desc="Rendering"):
             
-            scan = os.path.splitext(os.path.basename(scan_file))[0]
+            key_splits = key.split("/")
+            utc_year = key_splits[-5]
+            utc_month = key_splits[-4]
+            utc_date = key_splits[-3]
+            utc_station = key_splits[-2]
+            utc_date_station_prefix = os.path.join(utc_year, utc_month, utc_date, utc_station)
+            scan = os.path.splitext(key_splits[-1])[0]
+
+            npz_dir = os.path.join(self.npz_dir, utc_date_station_prefix)
+            dz0_5_imgdir = os.path.join(self.dz0_5_imgdir, utc_date_station_prefix)
+            vr0_5_imgdir = os.path.join(self.vr0_5_imgdir, utc_date_station_prefix)
+            os.makedirs(npz_dir, exist_ok=True)
+            os.makedirs(dz0_5_imgdir, exist_ok=True)
+            os.makedirs(vr0_5_imgdir, exist_ok=True)
+
             npz_path = os.path.join(npz_dir, f"{scan}.npz")
             ref1_path = os.path.join(dz0_5_imgdir, f"{scan}.png")
 
@@ -116,7 +124,7 @@ class Renderer:
             arrays = {}
 
             try:
-                radar = pyart.io.read_nexrad_archive(scan_file)
+                radar = pyart.io.read_nexrad_archive(os.path.join(self.download_dir, key))
             except Exception as ex:
                 logger.error('[Scan Loading Failure] scan %s - %s' % (scan, str(ex)))
                 continue
@@ -137,7 +145,7 @@ class Renderer:
 
             if len(arrays) > 0:
                 np.savez_compressed(npz_path, **arrays)
-                self.render_img(arrays["array"], date_station_prefix, scan) # render ref1 and rv1 images for ui
+                self.render_img(arrays["array"], utc_date_station_prefix, scan) # render ref1 and rv1 images for ui
                 npz_files.append(npz_path)
                 img_files.append(ref1_path)
                 scan_names.append(scan)
@@ -145,7 +153,7 @@ class Renderer:
         return npz_files, img_files, scan_names
 
 
-    def render_img(self, array, date_station_prefix, scan):
+    def render_img(self, array, utc_date_station_prefix, scan):
         attributes = self.array_render_config['fields']
         elevations = self.array_render_config['elevs']
         for attr, elev in self.imgdirs:
@@ -154,6 +162,6 @@ class Renderer:
             rgb = rgb[::-1, :, :3]
                 # flip the y axis, from geographical (big y means North) to image (big y means lower)
                 # omit the fourth alpha dimension, NAN are black but not white
-            image.imsave(os.path.join(self.imgdirs[(attr, elev)], date_station_prefix, f"{scan}.png"), rgb)
+            image.imsave(os.path.join(self.imgdirs[(attr, elev)], utc_date_station_prefix, f"{scan}.png"), rgb)
 
 

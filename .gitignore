@@ -1,8 +1,8 @@
 # Manual Additions
 roosts_data/
 tools/slurm/
-dev_detector/custom_eval/*
-!dev_detector/custom_eval/precision_recall_curve.ipynb
+development/custom_eval/*
+!development/custom_eval/precision_recall_curve.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

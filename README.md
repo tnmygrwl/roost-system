@@ -12,8 +12,9 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
         scan keys and directories for downloaded scans are based on UTC dates
         - **renderer** renders numpy arrays from downloaded scans, visualizes arrays, 
         and deletes the scans after rendering; 
-        directories for rendered arrays are based on local dates
+        directories for rendered arrays and images are based on UTC dates
     - **detection**
+    - **evaluation** contains customized evaluation adapted from pycocotools v2.0.2
     - **tracking**
     - **utils** contains various utils, scripts to postprocess roost tracks, and scripts to generate visualization
 - **tools** is for system deployment

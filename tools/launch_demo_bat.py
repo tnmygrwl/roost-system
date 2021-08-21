@@ -4,17 +4,13 @@ import time
 NUM_CPUS = 7
 # station, start date (inclusive), end date (inclusive)
 # deployment
-STATIONS = ["KBBX", "KDAX", "KBYX", "KAMX"]
-TIMES = [("20000501", "20000531"),
-         ("20050501", "20050531"),
-         ("20100501", "20100531"),
-         ("20150501", "20150531"),
-         ("20200501", "20200531"),]
+STATIONS = ["KEWX"]
+TIMES = [("20170320", "20170321"),]
 SUN_ACTIVITY = "sunset"
-MIN_BEFORE = 30
+MIN_BEFORE = 20
 MIN_AFTER = 60
 # directory for system outputs
-EXPERIMENT_NAME = "clutter" # all_station_v1
+EXPERIMENT_NAME = "try"
 DATA_ROOT = f"/mnt/nfs/scratch1/wenlongzhao/roosts_data/{EXPERIMENT_NAME}"
 
 

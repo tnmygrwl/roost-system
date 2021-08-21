@@ -7,7 +7,7 @@ import numpy as np
 import datetime
 import time
 from collections import defaultdict
-from . import mask as maskUtils
+from pycocotools import mask as maskUtils
 import copy
 
 class COCOeval:
@@ -29,7 +29,7 @@ class COCOeval:
     #  recThrs    - [0:.01:1] R=101 recall thresholds for evaluation
     #  areaRng    - [...] A=4 object area ranges for evaluation
     #  maxDets    - [1 10 100] M=3 thresholds on max detections per image
-    #  iouType    - ['segm'] set iouType to 'segm', 'bbox' or 'keypoints'
+    #  iouType    - ['segm'] set iouType to 'segm', 'bbox'
     #  iouType replaced the now DEPRECATED useSegm parameter.
     #  useCats    - [1] if true use category labels for evaluation
     # Note: if useCats=0 category labels are ignored as in proposal scoring.
@@ -60,7 +60,7 @@ class COCOeval:
     # Data, paper, and tutorials available at:  http://mscoco.org/
     # Code written by Piotr Dollar and Tsung-Yi Lin, 2015.
     # Licensed under the Simplified BSD License [see coco/license.txt]
-    def __init__(self, cocoGt=None, cocoDt=None, iouType='segm'):
+    def __init__(self, cocoGt=None, cocoDt=None, iouType='bbox'):
         '''
         Initialize CocoEval using coco APIs for gt and dt
         :param cocoGt: coco object with ground truth annotations
@@ -146,8 +146,6 @@ class COCOeval:
 
         if p.iouType == 'segm' or p.iouType == 'bbox':
             computeIoU = self.computeIoU
-        elif p.iouType == 'keypoints':
-            computeIoU = self.computeOks
         self.ious = {(imgId, catId): computeIoU(imgId, catId) \
                         for imgId in p.imgIds
                         for catId in catIds}
@@ -190,49 +188,6 @@ class COCOeval:
         # compute iou between each dt and gt region
         iscrowd = [int(o['iscrowd']) for o in gt]
         ious = maskUtils.iou(d,g,iscrowd)
-        return ious
-
-    def computeOks(self, imgId, catId):
-        p = self.params
-        # dimention here should be Nxm
-        gts = self._gts[imgId, catId]
-        dts = self._dts[imgId, catId]
-        inds = np.argsort([-d['score'] for d in dts], kind='mergesort')
-        dts = [dts[i] for i in inds]
-        if len(dts) > p.maxDets[-1]:
-            dts = dts[0:p.maxDets[-1]]
-        # if len(gts) == 0 and len(dts) == 0:
-        if len(gts) == 0 or len(dts) == 0:
-            return []
-        ious = np.zeros((len(dts), len(gts)))
-        sigmas = p.kpt_oks_sigmas
-        vars = (sigmas * 2)**2
-        k = len(sigmas)
-        # compute oks between each detection and ground truth object
-        for j, gt in enumerate(gts):
-            # create bounds for ignore regions(double the gt bbox)
-            g = np.array(gt['keypoints'])
-            xg = g[0::3]; yg = g[1::3]; vg = g[2::3]
-            k1 = np.count_nonzero(vg > 0)
-            bb = gt['bbox']
-            x0 = bb[0] - bb[2]; x1 = bb[0] + bb[2] * 2
-            y0 = bb[1] - bb[3]; y1 = bb[1] + bb[3] * 2
-            for i, dt in enumerate(dts):
-                d = np.array(dt['keypoints'])
-                xd = d[0::3]; yd = d[1::3]
-                if k1>0:
-                    # measure the per-keypoint distance if keypoints visible
-                    dx = xd - xg
-                    dy = yd - yg
-                else:
-                    # measure minimum distance to keypoints in (x0,y0) & (x1,y1)
-                    z = np.zeros((k))
-                    dx = np.max((z, x0-xd),axis=0)+np.max((z, xd-x1),axis=0)
-                    dy = np.max((z, y0-yd),axis=0)+np.max((z, yd-y1),axis=0)
-                e = (dx**2 + dy**2) / vars / (gt['area']+np.spacing(1)) / 2
-                if k1 > 0:
-                    e=e[vg > 0]
-                ious[i, j] = np.sum(np.exp(-e)) / e.shape[0]
         return ious
 
     def evaluateImg(self, imgId, catId, aRng, maxDet):
@@ -473,26 +428,11 @@ class COCOeval:
             stats[10] = _summarize(0, areaRng='medium', maxDets=self.params.maxDets[2])
             stats[11] = _summarize(0, areaRng='large', maxDets=self.params.maxDets[2])
             return stats
-        def _summarizeKps():
-            stats = np.zeros((10,))
-            stats[0] = _summarize(1, maxDets=20)
-            stats[1] = _summarize(1, maxDets=20, iouThr=.5)
-            stats[2] = _summarize(1, maxDets=20, iouThr=.75)
-            stats[3] = _summarize(1, maxDets=20, areaRng='medium')
-            stats[4] = _summarize(1, maxDets=20, areaRng='large')
-            stats[5] = _summarize(0, maxDets=20)
-            stats[6] = _summarize(0, maxDets=20, iouThr=.5)
-            stats[7] = _summarize(0, maxDets=20, iouThr=.75)
-            stats[8] = _summarize(0, maxDets=20, areaRng='medium')
-            stats[9] = _summarize(0, maxDets=20, areaRng='large')
-            return stats
         if not self.eval:
             raise Exception('Please run accumulate() first')
         iouType = self.params.iouType
         if iouType == 'segm' or iouType == 'bbox':
             summarize = _summarizeDets
-        elif iouType == 'keypoints':
-            summarize = _summarizeKps
         self.stats = summarize()
 
     def __str__(self):
@@ -513,23 +453,9 @@ class Params:
         self.areaRngLbl = ['all', 'small', 'medium', 'large']
         self.useCats = 1
 
-    def setKpParams(self):
-        self.imgIds = []
-        self.catIds = []
-        # np.arange causes trouble.  the data point on arange is slightly larger than the true value
-        self.iouThrs = np.linspace(.5, 0.95, int(np.round((0.95 - .5) / .05)) + 1, endpoint=True)
-        self.recThrs = np.linspace(.0, 1.00, int(np.round((1.00 - .0) / .01)) + 1, endpoint=True)
-        self.maxDets = [20]
-        self.areaRng = [[0 ** 2, 1e5 ** 2], [32 ** 2, 96 ** 2], [96 ** 2, 1e5 ** 2]]
-        self.areaRngLbl = ['all', 'medium', 'large']
-        self.useCats = 1
-        self.kpt_oks_sigmas = np.array([.26, .25, .25, .35, .35, .79, .79, .72, .72, .62,.62, 1.07, 1.07, .87, .87, .89, .89])/10.0
-
-    def __init__(self, iouType='segm'):
+    def __init__(self, iouType='bbox'):
         if iouType == 'segm' or iouType == 'bbox':
             self.setDetParams()
-        elif iouType == 'keypoints':
-            self.setKpParams()
         else:
             raise Exception('iouType not supported')
         self.iouType = iouType

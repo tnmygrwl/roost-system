@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import cv2
 import imageio
 import roosts.utils.file_util as fileUtil
+from roosts.utils.time_util import utc_to_local_time
 from tqdm import tqdm
 import itertools 
 
@@ -270,16 +271,11 @@ class Visualizer:
         imageio.mimsave(outpath, seq, "GIF", **kargs)
             
 
-    def generate_web_files(self, detections, tracks, outpath, n_existing_tracks):
+    def generate_web_files(self, detections, tracks, outpath):
         
         det_dict = {}
         for det in detections:
             det_dict[det["det_ID"]] = det
-
-        if not os.path.exists(outpath):
-            with open(outpath, 'w+') as f:
-                f.write(f'track_id,filename,from_{self.sun_activity},det_score,x,y,r,lon,lat,radius\n')
-                assert n_existing_tracks == 0
 
         with open(outpath, 'a+') as f:
             n_tracks = 0
@@ -302,12 +298,11 @@ class Visualizer:
                     det = det_dict[det_ID]
                     # if (("windfarm" in det.keys()) and det["windfarm"]):
                     #    continue
-                    f.write('{:d},{:s},{:d},{:.3f},{:.2f},{:2f},{:2f},{:.2f},{:2f},{:2f}\n'.format(
-                        det["track_ID"]+n_existing_tracks, det["scanname"], int(det[f"from_{self.sun_activity}"]),
+                    f.write('{:d},{:s},{:d},{:.3f},{:.2f},{:2f},{:2f},{:.2f},{:2f},{:2f},{:s}\n'.format(
+                        det["track_ID"], det["scanname"], int(det[f"from_{self.sun_activity}"]),
                         det["det_score"], det["im_bbox"][0], det["im_bbox"][1], det["im_bbox"][2], 
-                        det["geo_bbox"][0], det["geo_bbox"][1], det["geo_bbox"][2]))
+                        det["geo_bbox"][0], det["geo_bbox"][1], det["geo_bbox"][2], utc_to_local_time(det["scanname"])
+                    ))
                     saved_track = True
                 if saved_track:
                     n_tracks += 1
-
-        return n_existing_tracks + n_tracks
