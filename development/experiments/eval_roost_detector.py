@@ -22,7 +22,7 @@ from detectron2.utils.logger import setup_logger
 
 ########## args ##########
 parser = argparse.ArgumentParser(description='Roost detection')
-parser.add_argument('--ckpt_path', default='', type=str, help='pretraind predictor')
+parser.add_argument('--ckpt_path', type=str, help='pretrained predictor')
 parser.add_argument('--eval_strategy', default=1, type=int, help='1: ignore small objects < 15x15 out of 1200x1200')
 
 parser.add_argument('--imsize', default=1200, type=int, help='reshape input image to this size')

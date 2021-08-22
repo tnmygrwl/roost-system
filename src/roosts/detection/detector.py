@@ -91,18 +91,3 @@ class Detector:
         return outputs
 
 
-if __name__ == "__main__":
-    
-    # model 
-    ckpt_path = "/home/zezhoucheng/random_repo/roosts/experiments/experiments/01-first-trial/logs/KDOX_lr_0.01000/model_final.pth"
-    detector = Detector(ckpt_path)
-
-    # data
-    data_path = "/home/zezhoucheng/random_repo/roosts/libs/wsrdata/static/arrays/v0.1.0/2008/10/17/KDOX/KDOX20081017_112306_V04.npz"
-    data_path2 = "/home/zezhoucheng/random_repo/roosts/libs/wsrdata/static/arrays/v0.1.0/2010/10/02/KDOX/KDOX20101002_112200_V04.npz"
-
-    # make prediction
-    outputs = detector.run([data_path, data_path2])
-    print(outputs)
-    
-

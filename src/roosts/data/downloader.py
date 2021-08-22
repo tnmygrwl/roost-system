@@ -22,6 +22,7 @@ class Downloader:
         for key in tqdm(keys, desc="Downloading"):
             # skip if an npz file is already rendered
             if os.path.exists(os.path.join(self.npz_dir, f"{os.path.splitext(key)[0]}.npz")):
+                valid_keys.append(key)
                 continue
 
             try:

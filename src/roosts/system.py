@@ -61,9 +61,9 @@ class RoostSystem():
         fileUtil.delete_files([os.path.join(self.dirs["scan_dir"], key) for key in keys])
 
         if len(npz_files) == 0:
-            end_time = time.time()
+            process_end_time = time.time()
             logger.info(f'[Passed] no successfully rendered scan for {self.args.station} local time {local_date_string}; '
-                        f'total time elapse: {end_time - start_time}')
+                        f'total time elapse: {process_end_time - process_start_time}')
             print(f"No successfully rendered scan.\nTotal time elapse: {end_time - start_time}\n", flush=True)
             return
 
