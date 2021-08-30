@@ -18,7 +18,11 @@ class RoostSystem():
     def __init__(self, args, det_cfg, pp_cfg, dirs):
         self.args = args
         self.dirs = dirs
-        self.downloader = Downloader(download_dir=dirs["scan_dir"], npz_dir=dirs["npz_dir"])
+        self.downloader = Downloader(
+            download_dir=dirs["scan_dir"], npz_dir=dirs["npz_dir"],
+            aws_access_key_id=args.aws_access_key_id,
+            aws_secret_access_key=args.aws_secret_access_key,
+        )
         self.renderer = Renderer(dirs["scan_dir"], dirs["npz_dir"], dirs["ui_img_dir"])
         if not args.just_render:
             self.detector = Detector(**det_cfg)
@@ -64,7 +68,7 @@ class RoostSystem():
             process_end_time = time.time()
             logger.info(f'[Passed] no successfully rendered scan for {self.args.station} local time {local_date_string}; '
                         f'total time elapse: {process_end_time - process_start_time}')
-            print(f"No successfully rendered scan.\nTotal time elapse: {end_time - start_time}\n", flush=True)
+            print(f"No successfully rendered scan.\nTotal time elapse: {process_end_time - process_start_time}\n", flush=True)
             return
 
         os.makedirs(self.dirs["scan_and_track_dir"], exist_ok=True)

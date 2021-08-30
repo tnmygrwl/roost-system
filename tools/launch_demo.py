@@ -4,19 +4,21 @@ import time
 NUM_CPUS = 7
 # station, start date (inclusive), end date (inclusive)
 # greatlakes_test
-STATIONS = ["KBUF", "KCLE", "KTYX"]
-TIMES = [("20100201", "20100331"), ("20100801", "20100930"),
-         ("20170201", "20170331"), ("20170801", "20170930"),]
+# STATIONS = ["KBUF", "KCLE", "KTYX"]
+# TIMES = [("20100201", "20100331"), ("20100801", "20100930"),
+#          ("20170201", "20170331"), ("20170801", "20170930"),]
 # deployment
 # STATIONS = ["KCLE", "KBUF", "KTYX", "KGRB", "KMQT", "KMKX",
 #             "KLOT", "KIWX", "KGRR", "KAPX", "KDTX", "KDLH",]
 # TIMES = [("20190601", "20191231"), ("20180601", "20181231"),
 #          ("20170601", "20171231"), ("20160601", "20161231"),]
+STATIONS = ["KDTX"]
+TIMES = [("20190601", "20191231")]
 SUN_ACTIVITY = "sunrise"
 MIN_BEFORE = 30
 MIN_AFTER = 90
 # directory for system outputs
-EXPERIMENT_NAME = "greatlakes_test_exp07_det01"
+EXPERIMENT_NAME = "all_stations_v1"
 DATA_ROOT = f"/mnt/nfs/scratch1/wenlongzhao/roosts_data/{EXPERIMENT_NAME}"
 
 

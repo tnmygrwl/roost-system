@@ -10,10 +10,12 @@ class Downloader:
         in a daily basis. Station-day is the minimum unit of tracking roosts.
     """
 
-    def __init__(self, download_dir, npz_dir):
+    def __init__(self, download_dir, npz_dir, aws_access_key_id=None, aws_secret_access_key=None):
         self.download_dir = download_dir
         os.makedirs(self.download_dir, exist_ok=True)
         self.npz_dir = npz_dir
+        self.aws_access_key_id = aws_access_key_id,
+        self.aws_secret_access_key = aws_secret_access_key,
 
     def download_scans(self, keys, logger):
         """ Download radar scans from AWS """
@@ -26,7 +28,11 @@ class Downloader:
                 continue
 
             try:
-                download_scan(key, self.download_dir)
+                download_scan(
+                    key, self.download_dir,
+                    aws_access_key_id=args.aws_access_key_id,
+                    aws_secret_access_key=args.aws_secret_access_key,
+                )
                 valid_keys.append(key)
                 logger.info('[Download Success] scan %s' % key.split("/")[-1])
             except Exception as ex:

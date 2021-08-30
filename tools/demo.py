@@ -27,6 +27,8 @@ parser.add_argument('--data_root', type=str, help="directory for all outputs",
                     default=f"{here}/../roosts_data")
 parser.add_argument('--just_render', action='store_true', help="just download and render, no detection and tracking")
 parser.add_argument('--gif_vis', action='store_true', help="generate gif visualization")
+parser.add_argument('--aws_access_key_id', type=str, default=None)
+parser.add_argument('--aws_secret_access_key', type=str, default=None)
 args = parser.parse_args()
 assert args.sun_activity in ["sunrise", "sunset"]
 print(args, flush=True)
@@ -81,7 +83,11 @@ for day_idx, day in enumerate(days):
     sun_activity_time = get_sun_activity_time(args.station, day, sun_activity=args.sun_activity) # utc
     start_time = sun_activity_time - timedelta(minutes=args.min_before)
     end_time = sun_activity_time + timedelta(minutes=args.min_after)
-    keys = get_station_day_scan_keys(start_time, end_time, args.station)
+    keys = get_station_day_scan_keys(
+        start_time, end_time, args.station,
+        aws_access_key_id=args.aws_access_key_id,
+        aws_secret_access_key=args.aws_secret_access_key,
+    )
     keys = sorted(list(set(keys)))  # aws keys
 
     roost_system.run_day_station(day, keys, process_start_time)

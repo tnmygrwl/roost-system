@@ -143,7 +143,7 @@ class Renderer:
             except Exception as ex:
                 logger.error('[Dualpol Rendering Failure] scan %s - %s' % (scan, str(ex)))
 
-            if len(arrays) > 0:
+            if "array" in arrays:
                 np.savez_compressed(npz_path, **arrays)
                 self.render_img(arrays["array"], utc_date_station_prefix, scan) # render ref1 and rv1 images for ui
                 npz_files.append(npz_path)
