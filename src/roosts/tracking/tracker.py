@@ -90,7 +90,6 @@ class Tracker:
             delta_t = (int(next_scan[13:15]) - int(scan[13:15])) * 60 + int(next_scan[15:17]) - int(scan[15:17]) 
             for track_idx, track in enumerate(tracks):
 
-
                 # fine the best match
                 if len(next_dets) == 0: # no detections in the next frame 
                     best_next_idx, best_next_det = None, None

@@ -44,7 +44,7 @@ DET_CFG = {
                          [128, 144, 160, 176, 192, 208, 224, 240, 256],
                          [256, 288, 320, 352, 384, 416, 448, 480, 512]],
     "nms_thresh":       0.3,
-    "score_thresh":     0.1,
+    "score_thresh":     0.05,
     "config_file":      "COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml",
     "use_gpu":          torch.cuda.is_available(),
 }
@@ -55,7 +55,7 @@ PP_CFG = {
     "geosize":          300000,
     "sun_activity":     args.sun_activity,
     "clean_windfarm":   True,
-    "clean_rain":       True
+    "clean_rain":       True,
 }
 
 # directories

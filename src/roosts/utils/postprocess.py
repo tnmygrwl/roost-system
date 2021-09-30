@@ -18,6 +18,7 @@ class Postprocess():
                  imsize = 600, 
                  geosize = 300000, # by default, the image size represents 300km
                  sun_activity = None,
+                 nms = True,
                  clean_windfarm = True,
                  clean_rain = True,
                  ): # this means large y coordinate indicate the North
@@ -26,6 +27,7 @@ class Postprocess():
         self.geosize = geosize
         assert sun_activity in ["sunrise", "sunset"]
         self.sun_activity = sun_activity
+        self.nms = nms
         self.clean_windfarm = clean_windfarm
         self.clean_rain = clean_rain
         
@@ -157,13 +159,16 @@ class Postprocess():
         detections = self.geo_converter(detections)
         # populate detections with mins from sunrise/sunset time
         detections = self.add_sun_activity_time(detections, self.sun_activity)
-        # use only tracks after NMS 
-        tracks = [t for t in tracks if not t["NMS_suppressed"]]
+
+        if self.nms:
+            # use only tracks after NMS
+            tracks = [t for t in tracks if not t["NMS_suppressed"]]
 
         # clean up the windfarms using windfarm database
         det_dict = {}
         for det in detections:
-            det["rain"] = False
+            det["rain"] = False # not considered rain
+            det["windfarm"] = False # not considered windfarm
             det_dict[det["det_ID"]] = det
         if self.clean_windfarm:
             for track in tqdm(tracks, desc="Cleaning windfarm"):
