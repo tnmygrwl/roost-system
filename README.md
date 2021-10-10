@@ -85,8 +85,17 @@ Review the updated AWS config.
 3. Modify **demo.py** for system customization. 
 For example, DET_CFG can be changed to adopt a new detector.
 
-4. In **tools**, modify VARIABLES in **launch_demo.py** and run `python launch_demo.py` 
-to submit jobs to slurm and process multiple batches of data. 
+4. In **tools**, modify VARIABLES in **launch_demo.py**. 
+    1. EXPERIMENT_NAME needs to be carefully chosen; 
+    it'll correspond to the dataset name later used in the website.
+    2. If there are previous batches processed for this EXPERIMENT_NAME 
+    (i.e. dataset to be loaded to the website),
+    we can move previously processed data at the output directory to another location. 
+    Then we can save the newly processed data at the same output directory; when we 
+    load the new data to the website, previous data don't need to be loaded again.
+
+5. In **tools**, run `python launch_demo.py` 
+to submit jobs to slurm and process multiple batches of data.
 
 #### Website Visualization
 In the generated csv files, the following information could be used to further filter the tracks: 
