@@ -44,7 +44,7 @@ To run detection with GPU, check the cuda version at, for example, `/usr/local/c
     pip install -e .
    ```
 
-2. Jupyter notebook.
+2. (Optional) Jupyter notebook.
 - `pip install jupyter`
 - Add the python environment to jupyter:
     ```bash
@@ -82,13 +82,11 @@ Review the updated AWS config.
     vim ~/.aws/config
     ```
 
-3. In **tools**, modify **launch_demo.py** and run `python launch_demo.py` 
+3. Modify **demo.py** for system customization. 
+For example, DET_CFG can be changed to adopt a new detector.
+
+4. In **tools**, modify VARIABLES in **launch_demo.py** and run `python launch_demo.py` 
 to submit jobs to slurm and process multiple batches of data. 
-For additional customization, modify **demo.py**.
-If we'd like to group scans and tracks based on local time instead of utc in the web ui, 
-run **utc_to_local_time.py** to append local time to the web ui files.
-Currently the system renders more channels than needed for detection and tracking; 
-inference could be accelerated by rendering only useful channels.
 
 #### Website Visualization
 In the generated csv files, the following information could be used to further filter the tracks: 

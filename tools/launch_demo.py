@@ -4,15 +4,15 @@ import time
 NUM_CPUS = 7
 # station, start date (inclusive), end date (inclusive)
 # greatlakes_test
-# STATIONS = ["KBUF", "KCLE", "KTYX"]
-# TIMES = [("20100201", "20100331"), ("20100801", "20100930"),
-#          ("20170201", "20170331"), ("20170801", "20170930"),]
+STATIONS = ["KBUF", "KCLE", "KTYX"]
+TIMES = [("20100201", "20100331"), ("20100801", "20100930"),
+         ("20170201", "20170331"), ("20170801", "20170930"),]
 # deployment
-STATIONS = ["KCLE", "KBUF", "KTYX", "KGRB", "KMQT", "KMKX",
-            "KLOT", "KIWX", "KGRR", "KAPX", "KDTX", "KDLH",]
-TIMES = [("20150601", "20151231"), ("20140601", "20141231"),
-         ("20130601", "20131231"), ("20120601", "20121231"),
-         ("20110601", "20111231"),]
+# STATIONS = ["KCLE", "KBUF", "KTYX", "KGRB", "KMQT", "KMKX",
+#             "KLOT", "KIWX", "KGRR", "KAPX", "KDTX", "KDLH",]
+# TIMES = [("19960601", "19961231"), ("19970601", "19971231"),
+#          ("19980601", "19981231"), ("19990601", "19991231"),
+#          ("20000601", "20001231")]
 SUN_ACTIVITY = "sunrise"
 MIN_BEFORE = 30
 MIN_AFTER = 90
