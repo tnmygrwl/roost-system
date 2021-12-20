@@ -21,10 +21,12 @@ from detectron2.utils.logger import setup_logger
 
 ########## args ##########
 parser = argparse.ArgumentParser(description='Roost detection')
+parser.add_argument('--train_dataset', required=True, type=int, help='training dataset version')
 parser.add_argument('--imsize', default=1200, type=int, help='reshape input image to this size')
 parser.add_argument('--flip', action='store_true', help='flip to augment')
 parser.add_argument('--rotate', action='store_true', help='rotate to augment')
 parser.add_argument('--filter_empty', action='store_true', help='ignore scans without annotations during training')
+parser.add_argument('--seed', default=1, type=int, help='random seed')
 
 parser.add_argument('--network', required=True, type=str, help='detection model backbone')
 parser.add_argument('--pretrain', default='det', type=str, help='init with no, cls, or det pretraining')
@@ -42,12 +44,46 @@ args = parser.parse_args()
 print(args)
 setup_logger(output=os.path.join(args.output_dir, "train.log")) # partly repetitive of slurm logs
 
-SPLITS = ["train"] # "val", "test"
-DATASET = "roosts_v0.1.0"
-JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.1.0"
-DATASET_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0.json")
-SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0_standard_splits.json")
-ARRAY_DIR = "/mnt/nfs/work1/smaji/zezhoucheng/randmo_repo/roosts/libs/wsrdata/static/arrays/v0.1.0"
+if args.train_dataset == 1:
+    DATASET = "roosts_v0.1.0"
+    print("Training with the roosts_v0.1.0 train split.")
+elif args.train_dataset == 2:
+    DATASET = "roosts_v0.2.0_all_nmd_nbt"
+    print("Training with the roosts_v0.2.0 all train split. No miss day, no bad track.")
+elif args.train_dataset == 3:
+    DATASET = "roosts_v0.2.0_all_md_nbt"
+    print("Training with the roosts_v0.2.0 all train split. Keeping miss day, no bad track.")
+elif args.train_dataset == 4:
+    DATASET = "roosts_v0.2.0_all_nmd_bt"
+    print("Training with the roosts_v0.2.0 all train split. No miss day, keeping bad track.")
+elif args.train_dataset == 5:
+    DATASET = "roosts_v0.2.0_all_md_bt"
+    print("Training with the roosts_v0.2.0 all train split. Keeping miss day, keeping bad track.")
+elif args.train_dataset == 6:
+    DATASET = "roosts_v0.2.0_dualpol"
+    print("Training with the roosts_v0.2.0 dualpol train split. Keeping miss day, no bad track.")
+else:
+    print("Unknown training dataset. Program ending.")
+
+if "v0.1.0" in DATASET:
+    JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.1.0"
+    DATASET_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0.json")
+elif "v0.2.0" in DATASET:
+    JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.2.0"
+    DATASET_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0.json")
+
+if "v0.1.0" in DATASET:
+    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0_standard_splits.json")
+elif "v0.2.0_all" in DATASET:
+    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0_all_splits.json")
+elif "v0.2.0_dualpol" in DATASET:
+    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0_dualpol_splits.json")
+
+NO_BAD_TRACK_DATASET_VERSIONS = [2, 3, 6]
+NO_MISS_DAY_DATASET_VERSIONS = [2, 4]
+
+SPLITS = ["train"]  # "val", "test"
+ARRAY_DIR = "/mnt/nfs/datasets/RadarNPZ"
 CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5)]
 NORMALIZERS = {
     'reflectivity':              pltc.Normalize(vmin=  -5, vmax= 35),
@@ -149,6 +185,12 @@ cfg.SOLVER.MAX_ITER = args.max_iter # default 40k, 1x 90k, 3x 270k
 # cfg.SOLVER.STEPS = (int(.75 * args.max_iter), int(.90 * args.max_iter)) # default 30k, 1x (60k, 80k), 3x (210k, 250k)
 cfg.OUTPUT_DIR = args.output_dir
 
+random.seed(args.seed)
+os.environ['PYTHONHASHSEED'] = str(args.seed)
+np.random.seed(args.seed)
+torch.manual_seed(args.seed)
+torch.cuda.manual_seed(args.seed)
+
 
 ########## data ##########
 with open(DATASET_JSON) as f:
@@ -165,7 +207,12 @@ def get_roost_dicts(split):
     scan_id_to_idx = {}
     idx = 0
     for scan_id in scan_list:
-        array_path = os.path.join(ARRAY_DIR, dataset["scans"][scan_id]["array_path"])
+        if "v0.1.0" in DATASET:
+            array_path = os.path.join(ARRAY_DIR, "v0.1.0", dataset["scans"][scan_id]["array_path"])
+        elif "v0.2.0" in DATASET:
+            array_path = os.path.join(
+                ARRAY_DIR, dataset["scans"][scan_id]["dataset_version"], dataset["scans"][scan_id]["array_path"]
+            )
         scan_id_to_idx[scan_id] = idx
         dataset_dicts.append({
             "file_name": array_path,
@@ -177,6 +224,9 @@ def get_roost_dicts(split):
         idx += 1
 
     for anno in dataset["annotations"]:
+        if args.train_dataset in NO_BAD_TRACK_DATASET_VERSIONS and anno['subcategory'] == 'bad-track': continue
+        if args.train_dataset in NO_MISS_DAY_DATASET_VERSIONS and anno['day_notes'] == 'miss': continue
+
         if anno["scan_id"] in scan_id_to_idx:
             dataset_dicts[scan_id_to_idx[anno["scan_id"]]]["annotations"].append({
                 "bbox": [anno["bbox"][0], anno["bbox"][1],
@@ -208,8 +258,6 @@ if args.visualize:
         out = visualizer.draw_dataset_dict(d)
         cv2.imwrite(f'vis_train_{i}.png', out.get_image()[:, :, ::-1])
 
-# backup_dict = get_detection_dataset_dicts(f"{DATASET}_train")[0]
-
 # data loader
 def mapper(dataset_dict):
     """
@@ -217,8 +265,6 @@ def mapper(dataset_dict):
     """
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
 
-    # if "KOKX20111007_104935_V03" in dataset_dict["file_name"]:
-    #     dataset_dict = copy.deepcopy(backup_dict)
     array = np.load(dataset_dict["file_name"])["array"]
     image = np.stack([NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :]) 
                       for (attr, elev) in CHANNELS], axis=-1)

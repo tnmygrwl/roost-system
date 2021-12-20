@@ -5,7 +5,7 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
 
 #### Repository Overview
 - **checkpoints** is for trained model checkpoints
-- **dev_detector** is for developing detection models
+- **development** is for developing detection models
 - **src** is for system implementation
     - **data**
         - **downloader** downloads radar scans based on station and day; 
@@ -61,7 +61,7 @@ To run detection with GPU, check the cuda version at, for example, `/usr/local/c
 - Enter `localhost:9990` from a local browser tab
 
 #### Developing a detection model
-- **dev_detector** contains all training and evaluation scripts.
+- **development** contains all training and evaluation scripts.
 - To prepare a training dataset (i.e. rendering arrays from radar scans and 
 generating json files to define datasets with annotations), refer to 
 **Installation** and **Dataset Preparation** in the README of 
@@ -69,6 +69,7 @@ generating json files to define datasets with annotations), refer to
 - Before training, run **try_load_arrays.py** to make sure there's no broken npz files.
 
 #### Run Inference
+Inference can be run using CPU-only servers.
 1. Under **checkpoints**, download a trained detection checkpoint.
 
 2. [Configure AWS](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) by
@@ -92,7 +93,8 @@ For example, DET_CFG can be changed to adopt a new detector.
     (i.e. dataset to be loaded to the website),
     we can move previously processed data at the output directory to another location. 
     Then we can save the newly processed data at the same output directory; when we 
-    load the new data to the website, previous data don't need to be loaded again.
+    copy the new data to the server hosting the website, 
+    previous data don't need to be copied again.
 
 5. In **tools**, run `python launch_demo.py` 
 to submit jobs to slurm and process multiple batches of data.

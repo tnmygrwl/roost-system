@@ -22,6 +22,7 @@ from detectron2.utils.logger import setup_logger
 
 ########## args ##########
 parser = argparse.ArgumentParser(description='Roost detection')
+parser.add_argument('--test_dataset', required=True, type=int, help='testing dataset version')
 parser.add_argument('--ckpt_path', type=str, help='pretrained predictor')
 parser.add_argument('--eval_strategy', default=1, type=int, help='1: ignore small objects < 15x15 out of 1200x1200')
 
@@ -36,12 +37,42 @@ args = parser.parse_args()
 print(args)
 setup_logger(output=os.path.join(args.output_dir, "eval.log")) # partly repetitive of slurm logs
 
+if args.test_dataset == 1:
+    DATASET = "roosts_v0.1.0"
+    print("Testing with the roosts_v0.1.0 test split.")
+elif args.test_dataset == 2:
+    DATASET = "roosts_v0.2.0_standard_only_swallow"
+    print("Testing with swallow roost annotations in the roosts_v0.2.0 standard test split.")
+elif args.test_dataset == 3:
+    DATASET = "roosts_v0.2.0_standard"
+    print("Testing with the roosts_v0.2.0 standard test split.")
+elif args.test_dataset == 4:
+    DATASET = "roosts_v0.2.0_dualpol"
+    print("Testing with the roosts_v0.2.0 dualpol test split.")
+else:
+    print("Unknown testing dataset. Program ending.")
+    exit()
+
+if "v0.1.0" in DATASET:
+    JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.1.0"
+    DATASET_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0.json")
+elif "v0.2.0" in DATASET:
+    JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.2.0"
+    DATASET_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0.json")
+
+if "v0.1.0" in DATASET:
+    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0_standard_splits.json")
+elif "v0.2.0_standard" in DATASET:
+    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0_standard_splits.json")
+elif "v0.2.0_dualpol" in DATASET:
+    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0_dualpol_splits.json")
+
+SWALLOW_ROOST_DATASET_VERSIONS = [2]
+NO_BAD_TRACK_DATASET_VERSIONS = [2, 3, 4]
+NO_MISS_DAY_DATASET_VERSIONS = []
+
 SPLITS = ["test"] # "train", "val"
-DATASET = "roosts_v0.1.0"
-JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.1.0"
-DATASET_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0.json")
-SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0_standard_splits.json")
-ARRAY_DIR = "/mnt/nfs/work1/smaji/zezhoucheng/randmo_repo/roosts/libs/wsrdata/static/arrays/v0.1.0"
+ARRAY_DIR = "/mnt/nfs/datasets/RadarNPZ"
 CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5)]
 NORMALIZERS = {
     'reflectivity':              pltc.Normalize(vmin=  -5, vmax= 35),
@@ -137,7 +168,12 @@ def get_roost_dicts(split):
     scan_id_to_idx = {}
     idx = 0
     for scan_id in scan_list:
-        array_path = os.path.join(ARRAY_DIR, dataset["scans"][scan_id]["array_path"])
+        if "v0.1.0" in DATASET:
+            array_path = os.path.join(ARRAY_DIR, "v0.1.0", dataset["scans"][scan_id]["array_path"])
+        elif "v0.2.0" in DATASET:
+            array_path = os.path.join(
+                ARRAY_DIR, dataset["scans"][scan_id]["dataset_version"], dataset["scans"][scan_id]["array_path"]
+            )
         scan_id_to_idx[scan_id] = idx
         dataset_dicts.append({
             "file_name": array_path,
@@ -150,6 +186,10 @@ def get_roost_dicts(split):
 
     scan_id_set = set(scan_id_to_idx)
     for anno in dataset["annotations"]:
+        if args.test_dataset in SWALLOW_ROOST_DATASET_VERSIONS and anno['subcategory'] != 'swallow-roost': continue
+        if args.test_dataset in NO_BAD_TRACK_DATASET_VERSIONS and anno['subcategory'] == 'bad-track': continue
+        if args.test_dataset in NO_MISS_DAY_DATASET_VERSIONS and anno['day_notes'] == 'miss': continue
+
         if anno["scan_id"] in scan_id_set:
             if (anno["bbox"][2] + anno["bbox"][3]) / 2. <= args.imsize * 15. / 1200 and args.eval_strategy == 1:
                 continue
