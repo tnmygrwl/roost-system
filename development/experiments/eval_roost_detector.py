@@ -19,12 +19,17 @@ from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.utils.logger import setup_logger
 
+import adaptors_fpn
+from adaptors_fpn import CustomResize
 
 ########## args ##########
 parser = argparse.ArgumentParser(description='Roost detection')
 parser.add_argument('--test_dataset', required=True, type=int, help='testing dataset version')
 parser.add_argument('--ckpt_path', type=str, help='pretrained predictor')
 parser.add_argument('--eval_strategy', default=1, type=int, help='1: ignore small objects < 15x15 out of 1200x1200')
+
+parser.add_argument('--adaptor', default='None', type=str, help='adaptor: linear, multi-layer')
+parser.add_argument('--input_channels', default=3, type=int, help='number of input channels for adaptor')
 
 parser.add_argument('--imsize', default=1200, type=int, help='reshape input image to this size')
 parser.add_argument('--network', required=True, type=str, help='detection model backbone')
@@ -73,7 +78,34 @@ NO_MISS_DAY_DATASET_VERSIONS = []
 
 SPLITS = ["test"] # "train", "val"
 ARRAY_DIR = "/mnt/nfs/datasets/RadarNPZ"
-CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5)]
+
+if args.input_channels == 1:
+    CHANNELS = [("reflectivity", 0.5)]
+elif args.input_channels == 2:
+    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5)]
+elif args.input_channels == 3:
+    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5)]
+elif args.input_channels == 4:
+    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5), ("spectrum_width", 0.5)]
+elif args.input_channels == 6:
+    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
+                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5)]
+elif args.input_channels == 9:
+    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
+                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5),
+                ("reflectivity", 2.5), ("velocity", 2.5), ("spectrum_width", 2.5)]
+elif args.input_channels == 12:
+    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
+                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5),
+                ("reflectivity", 2.5), ("velocity", 2.5), ("spectrum_width", 2.5),
+                ("reflectivity", 3.5), ("velocity", 3.5), ("spectrum_width", 3.5)]
+elif args.input_channels == 15:
+    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
+                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5),
+                ("reflectivity", 2.5), ("reflectivity", 3.5), ("velocity", 2.5),
+                ('velocity', 3.5), ("spectrum_width", 2.5), ("spectrum_width", 3.5),
+                ("reflectivity", 4.5), ("velocity", 4.5), ("spectrum_width", 4.5)]
+
 NORMALIZERS = {
     'reflectivity':              pltc.Normalize(vmin=  -5, vmax= 35),
     'velocity':                  pltc.Normalize(vmin= -15, vmax= 15),
@@ -152,6 +184,18 @@ cfg.MODEL.ROI_HEADS.NMS_THRESH_TEST = 0.3 # default 0.5
 cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.005
 cfg.OUTPUT_DIR = args.output_dir
 
+####################################################
+#### GPS: when using adaptors ######################
+####################################################
+if args.adaptor != 'None':
+    cfg.MODEL.BACKBONE.NAME = 'custom_build_resnet_fpn_backbone' 
+    cfg.ADAPTOR_TYPE = args.adaptor
+    cfg.ADAPTOR_IN_CHANNELS = len(CHANNELS)*3 
+    cfg.MODEL.PIXEL_MEAN = []
+    cfg.MODEL.PIXEL_STD = []
+    for i in range(cfg.ADAPTOR_IN_CHANNELS):
+        cfg.MODEL.PIXEL_MEAN.append(127.5)
+        cfg.MODEL.PIXEL_STD.append(1.0)
 
 ########## data ##########
 with open(DATASET_JSON) as f:
@@ -168,6 +212,28 @@ def get_roost_dicts(split):
     scan_id_to_idx = {}
     idx = 0
     for scan_id in scan_list:
+        # GPS: calculate neighbor frames indices
+        neighbor_frame_id = []
+        current_day = dataset["scans"][scan_id]['key'].split('_')[0][-2::]
+        if scan_id == 0: # GPS: repeat current frame
+            neighbor_frame_id.append(idx)
+            neighbor_frame_id.append(idx)
+        elif scan_id == 1: # GPS: repeat previous frame
+            neighbor_frame_id.append(idx - 1)
+            neighbor_frame_id.append(idx - 1)
+        else:
+            previous_day  = dataset["scans"][scan_id - 1]['key'].split('_')[0][-2::]
+            previous_day2 = dataset["scans"][scan_id - 2]['key'].split('_')[0][-2::]
+            if current_day != previous_day:
+                neighbor_frame_id.append(idx)
+                neighbor_frame_id.append(idx)
+            elif current_day != previous_day2:
+                neighbor_frame_id.append(idx - 1)
+                neighbor_frame_id.append(idx - 1)
+            else:
+                neighbor_frame_id.append(idx - 1)
+                neighbor_frame_id.append(idx - 2)
+
         if "v0.1.0" in DATASET:
             array_path = os.path.join(ARRAY_DIR, "v0.1.0", dataset["scans"][scan_id]["array_path"])
         elif "v0.2.0" in DATASET:
@@ -178,6 +244,8 @@ def get_roost_dicts(split):
         dataset_dicts.append({
             "file_name": array_path,
             "image_id": scan_id,
+            "neighbor_id": neighbor_frame_id, # GPS: to track neighbor frame
+            "split": split, # GPS: to track the split
             "height": dataset["info"]["array_shape"][-1],
             "width": dataset["info"]["array_shape"][-2],
             "annotations": []
@@ -206,6 +274,11 @@ def get_roost_dicts(split):
 for d in SPLITS:
     DatasetCatalog.register(f"{DATASET}_{d}", lambda d=d: get_roost_dicts(d))
     MetadataCatalog.get(f"{DATASET}_{d}").set(thing_classes=["roost"])
+
+# GPS: load datasets to load neighbor frames
+split_dicts = {}
+for d in SPLITS:
+    split_dicts[d] = get_detection_dataset_dicts(f"{DATASET}_{d}", filter_empty=False)
 
 if args.visualize:
     roost_metadata = MetadataCatalog.get(f"{DATASET}_test")
@@ -239,14 +312,34 @@ def mapper(dataset_dict):
     :param dataset_dict: Metadata of one image, in Detectron2 Dataset format.
     """
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
+    previous_dict = split_dicts[dataset_dict["split"]][dataset_dict["neighbor_id"][0]] # GPS: dict of previous frame
+    previous_dict2 = split_dicts[dataset_dict["split"]][dataset_dict["neighbor_id"][1]] # GPS: dict of next frame
 
     array = np.load(dataset_dict["file_name"])["array"]
     image = np.stack([NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :]) 
                       for (attr, elev) in CHANNELS], axis=-1)
     np.nan_to_num(image, copy=False, nan=0.0)
     image = (image * 255).astype(np.uint8)
+
+    # GPS: do the same with neighbor array (t-1) and concatenate with current frame
+    previous_array = np.load(previous_dict["file_name"])["array"]
+    previous_image = np.stack([NORMALIZERS[attr](previous_array[attributes.index(attr), elevations.index(elev), :, :])
+                      for (attr, elev) in CHANNELS], axis=-1)
+    np.nan_to_num(previous_image, copy=False, nan=0.0)
+    previous_image = (previous_image * 255).astype(np.uint8)
+    # GPS: same for t-2
+    previous_array2 = np.load(previous_dict2["file_name"])["array"]
+    previous_image2 = np.stack([NORMALIZERS[attr](previous_array2[attributes.index(attr), elevations.index(elev), :, :])
+                      for (attr, elev) in CHANNELS], axis=-1)
+    np.nan_to_num(previous_image2, copy=False, nan=0.0)
+    previous_image2 = (previous_image2 * 255).astype(np.uint8)
+
+    # GPS: concatenate all time-frames
+    image = np.concatenate((previous_image2, previous_image, image), axis=2)
+
     aug_input = T.AugInput(image)
-    transform = T.Resize((args.imsize, args.imsize))(aug_input)
+    transform = CustomResize((args.imsize, args.imsize))(aug_input) # GPS
+    #transform = T.Resize((args.imsize, args.imsize))(aug_input)
     image = torch.from_numpy(np.array(aug_input.image.transpose(2, 0, 1)))
 
     annos = [
