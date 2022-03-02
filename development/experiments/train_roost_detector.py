@@ -21,6 +21,11 @@ from detectron2.utils.logger import setup_logger
 import adaptors_fpn
 from adaptors_fpn import CustomResize
 
+from detectron2.modeling import build_model
+from detectron2.checkpoint import DetectionCheckpointer
+from torchvision.transforms import GaussianBlur
+import matplotlib.pyplot as plt
+
 ########## args ##########
 parser = argparse.ArgumentParser(description='Roost detection')
 parser.add_argument('--train_dataset', required=True, type=int, help='training dataset version')
@@ -71,7 +76,8 @@ else:
     print("Unknown training dataset. Program ending.")
 
 if "v0.1.0" in DATASET:
-    JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.1.0"
+    #JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.1.0"
+    JSON_ROOT = "/scratch1/gperezsarabi/darkecology_old/roost-system/datasets/roosts_v0.1.0"
     DATASET_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0.json")
 elif "v0.2.0" in DATASET:
     JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.2.0"
@@ -88,7 +94,8 @@ NO_BAD_TRACK_DATASET_VERSIONS = [2, 3, 6]
 NO_MISS_DAY_DATASET_VERSIONS = [2, 4]
 
 SPLITS = ["train"]  # "val", "test"
-ARRAY_DIR = "/mnt/nfs/datasets/RadarNPZ"
+#ARRAY_DIR = "/mnt/nfs/datasets/RadarNPZ"
+ARRAY_DIR = "/scratch1/gperezsarabi/darkecology_old/roost-system/libs/wsrdata/static/arrays/"
 
 if args.input_channels == 1:
     CHANNELS = [("reflectivity", 0.5)]
@@ -211,7 +218,7 @@ cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE = args.reg_loss
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128 # number of proposals to sample for training, default 512
 cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (roost)
 cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
-cfg.SOLVER.IMS_PER_BATCH = 4
+cfg.SOLVER.IMS_PER_BATCH = 1 # GPS: default: 4
 cfg.SOLVER.BASE_LR = args.lr
 cfg.TEST.EVAL_PERIOD = args.eval_period
 cfg.SOLVER.CHECKPOINT_PERIOD = args.checkpoint_period
@@ -219,19 +226,22 @@ cfg.SOLVER.MAX_ITER = args.max_iter # default 40k, 1x 90k, 3x 270k
 # cfg.SOLVER.STEPS = (int(.75 * args.max_iter), int(.90 * args.max_iter)) # default 30k, 1x (60k, 80k), 3x (210k, 250k)
 cfg.OUTPUT_DIR = args.output_dir
 
-####################################################
-#### GPS: when using adaptors ######################
-#################################################### 
-if args.adaptor != 'None':
-    cfg.MODEL.BACKBONE.NAME = 'custom_build_resnet_fpn_backbone' 
-    cfg.ADAPTOR_TYPE = args.adaptor
-    cfg.ADAPTOR_IN_CHANNELS = len(CHANNELS)*3 
-    cfg.MODEL.PIXEL_MEAN = []
-    cfg.MODEL.PIXEL_STD = []
-    for i in range(cfg.ADAPTOR_IN_CHANNELS):
-        cfg.MODEL.PIXEL_MEAN.append(127.5)
-        cfg.MODEL.PIXEL_STD.append(1.0)
-    # cfg.MODEL.BACKBONE.FREEZE_AT = 0 # GPS: to unfreeze all layers (default=2)
+# GPS: load ol detector to predict t-1 detections.
+old_chkpt = 'checkpoints/59c_3ch_1fr.pth'
+old_model = build_model(cfg)  # returns a torch.nn.Module
+DetectionCheckpointer(old_model).load(old_chkpt)
+
+# GPS: TODO Probably will be better to unfreeze first two layers too (?).
+# GPS: TODO also modify output of bbox to include displacement.
+cfg.ADAPTOR_TYPE = args.adaptor
+cfg.MODEL.BACKBONE.NAME = 'custom_build_resnet_fpn_backbone'
+cfg.ADAPTOR_IN_CHANNELS = len(CHANNELS)*1 + 1 # GPS: current and previous frame + point detections render (total: 4 additional).
+cfg.MODEL.PIXEL_MEAN = []
+cfg.MODEL.PIXEL_STD = []
+for i in range(cfg.ADAPTOR_IN_CHANNELS):
+    cfg.MODEL.PIXEL_MEAN.append(127.5)
+    cfg.MODEL.PIXEL_STD.append(1.0)
+# cfg.MODEL.BACKBONE.FREEZE_AT = 0 # GPS: to unfreeze all layers (default=2)
 
 random.seed(args.seed)
 os.environ['PYTHONHASHSEED'] = str(args.seed)
@@ -260,22 +270,12 @@ def get_roost_dicts(split):
         current_day = dataset["scans"][scan_id]['key'].split('_')[0][-2::]
         if scan_id == 0: # GPS: repeat current frame
             neighbor_frame_id.append(idx)
-            neighbor_frame_id.append(idx)
-        elif scan_id == 1: # GPS: repeat previous frame
-            neighbor_frame_id.append(idx - 1)
-            neighbor_frame_id.append(idx - 1)
         else:
             previous_day  = dataset["scans"][scan_id - 1]['key'].split('_')[0][-2::]
-            previous_day2 = dataset["scans"][scan_id - 2]['key'].split('_')[0][-2::]
             if current_day != previous_day:
                 neighbor_frame_id.append(idx)
-                neighbor_frame_id.append(idx)
-            elif current_day != previous_day2:
-                neighbor_frame_id.append(idx - 1)
-                neighbor_frame_id.append(idx - 1)
             else:
                 neighbor_frame_id.append(idx - 1)
-                neighbor_frame_id.append(idx - 2)
 
         if "v0.1.0" in DATASET:
             array_path = os.path.join(ARRAY_DIR, "v0.1.0", dataset["scans"][scan_id]["array_path"])
@@ -335,6 +335,46 @@ if args.visualize:
         out = visualizer.draw_dataset_dict(d)
         cv2.imwrite(f'vis_train_{i}.png', out.get_image()[:, :, ::-1])
 
+
+# GPS: do a forward pass on old detector and render point detections.
+def render_point_detections(img):
+    '''
+    do a forward pass on old detector and render point detections.
+    '''
+    C, H, W = img.size()
+
+    inputs = [{"image": img}] # (C,H,W)   
+    
+    old_model.eval()
+    with torch.no_grad():
+        out_dict = old_model(inputs)
+    
+    pred_boxes = out_dict[0]["instances"].pred_boxes # Boxes object
+    areas = pred_boxes.area()/2000 # arbitrary value to normalize areas
+    centers = pred_boxes.get_centers() # (x,y)
+    scores = out_dict[0]["instances"].scores # [0,1]
+    
+    render = torch.zeros(1, H, W)
+    for i, score in enumerate(scores):
+        if score < 0.5: continue
+        temp = torch.zeros(1, H, W)    
+        temp[0, centers[i][1].long(), centers[i][0].long()] = score
+        Gaussian = GaussianBlur(max(3,int(areas[i].cpu().numpy())*10+1), max(1,int(areas[i].cpu().numpy())))
+        temp = Gaussian(temp)
+        render = torch.max(render, temp)
+    
+    '''
+    print(pred_boxes)
+    print(scores)
+    plt.subplot(121)
+    plt.imshow(render[0,:,:])
+    plt.subplot(122)
+    plt.imshow(img[0,:,:])
+    plt.show()
+    '''
+    return (render * 255).float()
+
+
 # data loader
 def mapper(dataset_dict):
     """
@@ -342,7 +382,6 @@ def mapper(dataset_dict):
     """
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
     previous_dict = split_dicts[dataset_dict["split"]][dataset_dict["neighbor_id"][0]] # GPS: dict of previous frame
-    previous_dict2 = split_dicts[dataset_dict["split"]][dataset_dict["neighbor_id"][1]]
 
     array = np.load(dataset_dict["file_name"])["array"]
     image = np.stack([NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :]) 
@@ -350,25 +389,36 @@ def mapper(dataset_dict):
     np.nan_to_num(image, copy=False, nan=0.0)
     image = (image * 255).astype(np.uint8)
 
+    aug_input1 = T.AugInput(image)
+    transform1 = CustomResize((args.imsize, args.imsize))(aug_input1)
+    image = torch.from_numpy(np.array(aug_input1.image.transpose(2, 0, 1)))
+
     # GPS: do the same with neighbor array (t-1) and concatenate with current frame
     previous_array = np.load(previous_dict["file_name"])["array"]
     previous_image = np.stack([NORMALIZERS[attr](previous_array[attributes.index(attr), elevations.index(elev), :, :])
                       for (attr, elev) in CHANNELS], axis=-1)
     np.nan_to_num(previous_image, copy=False, nan=0.0)
     previous_image = (previous_image * 255).astype(np.uint8)
-    # GPS: same for t-2
-    previous_array2 = np.load(previous_dict2["file_name"])["array"]
-    previous_image2 = np.stack([NORMALIZERS[attr](previous_array2[attributes.index(attr), elevations.index(elev), :, :])
-                      for (attr, elev) in CHANNELS], axis=-1)
-    np.nan_to_num(previous_image2, copy=False, nan=0.0)
-    previous_image2 = (previous_image2 * 255).astype(np.uint8)
     
-    # GPS: concatenate all time-frames
-    image = np.concatenate((previous_image2, previous_image, image), axis=2)
+    aug_input1 = T.AugInput(previous_image)
+    transform1 = CustomResize((args.imsize, args.imsize))(aug_input1)
+    previous_image = torch.from_numpy(np.array(aug_input1.image.transpose(2, 0, 1)))
 
-    aug_input = T.AugInput(image)
+    # GPS: TODO add following lines for each forward pass (i.e. for t and t-1 frames)
+    detections_render = render_point_detections(previous_image)
     
-    augs = [CustomResize((args.imsize, args.imsize))] # GPS: default interp=Image.BILINEAR
+    # GPS: TODO do a forward pass on single frame detector with t-1 and t to get centers to produce (1) t-1 point
+    #           detections render, and (2) displacement annotations (t-1 minus t centers). See track ids.
+    # GPS: TODO render point detections of t-1 into an WxHx1 image (we will need loc., size, and confidence).
+    #           can use Boxes.get_centers(): https://detectron2.readthedocs.io/en/latest/_modules/detectron2/structures/boxes.html
+
+    # GPS: concatenate all time-frames (TODO plus point detections render)
+    #image = torch.cat((detections_render, previous_image, image), 0)
+    image = torch.cat((detections_render, image), 0)
+
+    aug_input = T.AugInput(image.cpu().numpy())
+    
+    augs = [CustomResize((cfg.ADAPTOR_IN_CHANNELS, args.imsize, args.imsize))] # GPS: default interp=Image.BILINEAR
     #augs = [T.Resize((args.imsize, args.imsize))]
     if args.flip: augs.append(T.RandomFlip())
     if args.rotate: augs.append(T.RandomRotation(angle=[0, 90, 180, 270], expand=False, sample_style="choice"))
@@ -376,6 +426,9 @@ def mapper(dataset_dict):
     transforms = augs(aug_input)
 
     image = torch.from_numpy(np.array(aug_input.image.transpose(2, 0, 1)))
+    image = torch.from_numpy(np.array(aug_input.image))
+    # GPS: TODO add here displacement annotations (?). maybe in dataset_dict["annotations"]?
+    #           as a new key or inside bbox and implement an new bbox_mode (?)
     annos = [
         detection_utils.transform_instance_annotations(annotation, transforms, image.shape[1:])
         for annotation in dataset_dict.pop("annotations")
@@ -403,5 +456,7 @@ def main():
     trainer.train()
 
 if __name__ == "__main__":
+    torch.multiprocessing.set_start_method('spawn') # GPS: added to solve:
+    # RuntimeError: Cannot re-initialize CUDA in forked subprocess.
     main()
 

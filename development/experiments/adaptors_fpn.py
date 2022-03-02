@@ -13,7 +13,7 @@ from detectron2.layers import Conv2d, ShapeSpec, get_norm
 import detectron2.data.transforms as T
 from detectron2.modeling.backbone import Backbone
 from detectron2.modeling.backbone.build import BACKBONE_REGISTRY
-from detectron2.modeling.backbone.resnet import build_resnet_backbone
+from detectron2.modeling.backbone.resnet import build_resnet_backbone, BasicStem
 
 from PIL import Image
 from fvcore.transforms.transform import Transform
@@ -140,21 +140,20 @@ class FPN(Backbone):
             lateral_convs.append(lateral_conv)
             output_convs.append(output_conv)
         
-        # GPS: adaptor
-        self.is_adaptor = adaptor
-        if adaptor == 'linear':
-            self.adaptor = LinearAdaptor(input_channels=adaptor_in_channels)
-        elif adaptor == 'multi-layer':
-            self.adaptor = MultiLayerAdaptor(input_channels=adaptor_in_channels)
-        elif adaptor:
-            sys.exit('invalid adaptor <%s>!'%(adaptor))
-
         # Place convs into top-down order (from low to high resolution)
         # to make the top-down computation in forward clearer.
         self.lateral_convs = lateral_convs[::-1]
         self.output_convs = output_convs[::-1]
         self.top_block = top_block
         self.in_features = in_features
+
+        if True: # GPS: to change filters in first layer
+            bottom_up.stem = BasicStem(
+                                in_channels=adaptor_in_channels,
+                                out_channels=64,
+                                norm='FrozenBN',
+                                )
+        
         self.bottom_up = bottom_up
         # Return feature names are "p<stage>", like ["p2", "p3", ..., "p6"]
         self._out_feature_strides = {"p{}".format(int(math.log2(s))): s for s in in_strides}
@@ -185,9 +184,6 @@ class FPN(Backbone):
                 paper convention: "p<stage>", where stage has stride = 2 ** stage e.g.,
                 ["p2", "p3", ..., "p6"].
         """
-        if self.is_adaptor:
-            x = self.adaptor(x)
-
         # Reverse feature maps into top-down order (from low to high resolution)
         bottom_up_features = self.bottom_up(x)
         x = [bottom_up_features[f] for f in self.in_features[::-1]]
