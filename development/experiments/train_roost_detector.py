@@ -216,7 +216,7 @@ cfg.MODEL.ANCHOR_GENERATOR.ASPECT_RATIOS = [[1.0]] # default [[0.5, 1.0, 2.0]], 
 cfg.MODEL.RPN.BBOX_REG_LOSS_TYPE = args.reg_loss
 cfg.MODEL.ROI_BOX_HEAD.BBOX_REG_LOSS_TYPE = args.reg_loss
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128 # number of proposals to sample for training, default 512
-cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (roost)
+cfg.MODEL.ROI_HEADS.NUM_CLASSES = 2  # only has one class (roost)
 cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
 cfg.SOLVER.IMS_PER_BATCH = 1 # GPS: default: 4
 cfg.SOLVER.BASE_LR = args.lr
@@ -228,6 +228,7 @@ cfg.OUTPUT_DIR = args.output_dir
 
 # GPS: load ol detector to predict t-1 detections.
 old_chkpt = 'checkpoints/59c_3ch_1fr.pth'
+print(old_chkpt)
 old_model = build_model(cfg)  # returns a torch.nn.Module
 DetectionCheckpointer(old_model).load(old_chkpt)
 
