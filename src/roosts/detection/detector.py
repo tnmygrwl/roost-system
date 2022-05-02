@@ -6,6 +6,7 @@ import matplotlib.colors as pltc
 import numpy as np
 import os
 from tqdm import tqdm
+from geotiff import GeoTiff
 
 class Detector:
 
@@ -34,7 +35,7 @@ class Detector:
 
         self.predictor = DefaultPredictor(cfg)
 
-    def _preprocess(self, npz_path):
+    def _preprocess_npz_file(self, npz_path):
 
         # extract useful information from raw scan file, normalize the data and convert it to uint8
         CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5)]
@@ -52,21 +53,23 @@ class Detector:
         array = np.load(npz_path)["array"]
         image = np.stack([NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :])
                         for (attr, elev) in CHANNELS], axis=-1)
-        np.nan_to_num(image, copy=False, nan=0.0)
-        image = (image * 255).astype(np.uint8)
         
         return image
 
-    def run(self, npz_files):
+    def run(self, files, file_type = "npz"):
         
         outputs = []
         count = 0
-        for idx, npz_file in enumerate(tqdm(npz_files, desc="Detecting")):
-
+        for idx, file in enumerate(tqdm(files, desc="Detecting")):
             # extract scanname 
-            name = os.path.splitext(os.path.basename(npz_file))[0]
+            name = os.path.splitext(os.path.basename(file))[0]
             # preprocess data
-            data = self._preprocess(npz_file)
+            if file_type == "npz":
+                data = self._preprocess_npz_file(file)
+            elif file_type == "tiff":
+                data = np.array(GeoTiff(file, crs_code=4326).read())
+            np.nan_to_num(data, copy=False, nan=0.0)
+            data = (data * 255).astype(np.uint8)
             # detect roosts 
             prediction = self.predictor(data)["instances"]
             scores     = prediction.scores.cpu().numpy()
@@ -75,8 +78,9 @@ class Detector:
             bbox       = prediction.pred_boxes.tensor.cpu().numpy()
             H, W       = prediction.image_size
             centers    = prediction.pred_boxes.get_centers().cpu().numpy()
-            centers[:, 1] = H - centers[:, 1]
+            if file_type == "npz":
                 # flip the y axis, from geographical (big y means North) to image (big y means lower)
+                centers[:, 1] = H - centers[:, 1]
             radius     = ((bbox[:, 2] - bbox[:, 0]) + (bbox[:, 3] - bbox[:, 1])) / 4.
             radius     = radius[:, np.newaxis]
             bbox_xyr   = np.hstack((centers, radius))
@@ -88,6 +92,7 @@ class Detector:
                        "im_bbox"  : bbox_xyr[kk]}
                 count += 1
                 outputs.append(det)
+
         return outputs
 
 
