@@ -191,7 +191,7 @@ def get_roost_dicts(split):
         if args.test_dataset in NO_MISS_DAY_DATASET_VERSIONS and anno['day_notes'] == 'miss': continue
 
         if anno["scan_id"] in scan_id_set:
-            if (anno["bbox"][2] + anno["bbox"][3]) / 2. <= args.imsize * 15. / 1200 and args.eval_strategy == 1:
+            if (anno["bbox"][2] + anno["bbox"][3]) / 2. <= args.imsize * 15. / 1200 and args.eval_strategy in [1, 91]:
                 continue
             dataset_dicts[scan_id_to_idx[anno["scan_id"]]]["annotations"].append({
                 "bbox": [anno["bbox"][0], anno["bbox"][1],
@@ -241,6 +241,13 @@ def mapper(dataset_dict):
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
 
     array = np.load(dataset_dict["file_name"])["array"]
+    if args.eval_strategy == 91: # center-corner
+        tmp = array.copy()
+        h, w = array.shape[-2], array.shape[-1]
+        array[:, :, :int(h / 2), :int(w / 2)] = tmp[:, :, int(h / 2):, int(w / 2):]
+        array[:, :, :int(h / 2), int(w / 2):] = tmp[:, :, int(h / 2):, :int(w / 2)]
+        array[:, :, int(h / 2):, :int(w / 2)] = tmp[:, :, :int(h / 2), int(w / 2):]
+        array[:, :, int(h / 2):, int(w / 2):] = tmp[:, :, :int(h / 2), :int(w / 2)]
     image = np.stack([NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :]) 
                       for (attr, elev) in CHANNELS], axis=-1)
     np.nan_to_num(image, copy=False, nan=0.0)

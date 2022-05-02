@@ -32,7 +32,7 @@ To run detection with GPU, check the cuda version at, for example, `/usr/local/c
     ```bash
     conda create -n roostsys python=3.6
     conda activate roostsys
-   
+    
     # for development and inference with gpus, use the gpu version of torch; we assume cuda 10.1 here
     pip install torch==1.7.1+cu101 torchvision==0.8.2+cu101 -f https://download.pytorch.org/whl/torch_stable.html
     # for inference with cpus, use the cpu version of torch
@@ -98,6 +98,11 @@ For example, DET_CFG can be changed to adopt a new detector.
 
 5. In **tools**, run `python launch_demo.py` 
 to submit jobs to slurm and process multiple batches of data.
+
+#### Deployment Log
+- v1: Beginning of Summer 2021 Zezhou model.
+- v2: End of Summer 2021 Wenlong model with 48 AP. Good backbone, anchors, etc.
+- v3: End of Winter 2021 Gustavo model with 55 AP. Adapter layer and temporal features.
 
 #### Website Visualization
 In the generated csv files, the following information could be used to further filter the tracks: 

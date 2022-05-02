@@ -1,10 +1,6 @@
-import argparse
+import argparse, time, os, torch, warnings
 from datetime import timedelta
-import time
-import os
-import torch
 print(f"torch.get_num_threads: {torch.get_num_threads()}", flush=True)
-import warnings
 warnings.filterwarnings("ignore")
 
 from roosts.system import RoostSystem

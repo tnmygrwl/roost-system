@@ -1,6 +1,7 @@
 """
-Adapted from pycocotools 2.0.2
+Essentially the same as the pycocotools 2.0.2
 https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocotools/cocoeval.py
+Deleted keypoint related parts.
 """
 
 import numpy as np
