@@ -13,7 +13,8 @@ SUN_ACTIVITY = "sunset"
 MIN_BEFORE = 90
 MIN_AFTER = 150
 # directory for system outputs
-EXPERIMENT_NAME = "texas_bats_v2"
+EXPERIMENT_NAME = "texas_bats_v3"
+MODEL_VERSION = "v3"
 DATA_ROOT = f"/mnt/nfs/scratch1/wenlongzhao/roosts_data/{EXPERIMENT_NAME}"
 
 
@@ -45,7 +46,7 @@ for args in ARGS:
     demo.sbatch \
     --station {station} --start {start} --end {end} \
     --sun_activity {SUN_ACTIVITY} --min_before {MIN_BEFORE} --min_after {MIN_AFTER} \
-    --data_root {DATA_ROOT}'''
+    --data_root {DATA_ROOT} --model_version {MODLE_VERSION}'''
     
     os.system(cmd)
     time.sleep(1)
