@@ -46,7 +46,7 @@ for args in ARGS:
     demo.sbatch \
     --station {station} --start {start} --end {end} \
     --sun_activity {SUN_ACTIVITY} --min_before {MIN_BEFORE} --min_after {MIN_AFTER} \
-    --data_root {DATA_ROOT} --model_version {MODLE_VERSION}'''
+    --data_root {DATA_ROOT} --model_version {MODEL_VERSION}'''
     
     os.system(cmd)
     time.sleep(1)
