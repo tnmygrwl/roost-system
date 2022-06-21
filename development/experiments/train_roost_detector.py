@@ -44,46 +44,34 @@ args = parser.parse_args()
 print(args)
 setup_logger(output=os.path.join(args.output_dir, "train.log")) # partly repetitive of slurm logs
 
-if args.train_dataset == 1:
-    DATASET = "roosts_v0.1.0"
-    print("Training with the roosts_v0.1.0 train split.")
-elif args.train_dataset == 2:
-    DATASET = "roosts_v0.2.0_all_nmd_nbt"
-    print("Training with the roosts_v0.2.0 all train split. No miss day, no bad track.")
-elif args.train_dataset == 3:
-    DATASET = "roosts_v0.2.0_all_md_nbt"
-    print("Training with the roosts_v0.2.0 all train split. Keeping miss day, no bad track.")
-elif args.train_dataset == 4:
-    DATASET = "roosts_v0.2.0_all_nmd_bt"
-    print("Training with the roosts_v0.2.0 all train split. No miss day, keeping bad track.")
-elif args.train_dataset == 5:
-    DATASET = "roosts_v0.2.0_all_md_bt"
-    print("Training with the roosts_v0.2.0 all train split. Keeping miss day, keeping bad track.")
-elif args.train_dataset == 6:
-    DATASET = "roosts_v0.2.0_dualpol"
-    print("Training with the roosts_v0.2.0 dualpol train split. Keeping miss day, no bad track.")
-else:
-    print("Unknown training dataset. Program ending.")
-
-if "v0.1.0" in DATASET:
-    JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.1.0"
-    DATASET_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0.json")
-elif "v0.2.0" in DATASET:
-    JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.2.0"
-    DATASET_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0.json")
-
-if "v0.1.0" in DATASET:
-    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0_standard_splits.json")
-elif "v0.2.0_all" in DATASET:
-    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0_all_splits.json")
-elif "v0.2.0_dualpol" in DATASET:
-    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0_dualpol_splits.json")
-
-NO_BAD_TRACK_DATASET_VERSIONS = [2, 3, 6]
-NO_MISS_DAY_DATASET_VERSIONS = [2, 4]
+DATASETS = {
+    1: "v0.1.0_standard",
+    2: "v0.2.0_no_dualpol",
+    3: "v0.2.0_dualpol",
+    4: "v0.2.0_standard",
+    5: "v0.2.0_add_no_dualpol",
+    6: "v0.2.0_add_dualpol",
+    7: "v0.2.0_add_standard",
+    8: "v0.2.0_station1",
+    9: "v0.2.0_station2",
+    10: "v0.2.0_station3",
+    11: "v0.2.0_station4",
+    12: "v0.2.1_add_no_dualpol",
+    13: "v0.2.2_add_no_dualpol",
+    14: "v0.2.3_add_no_dualpol",
+    15: "v0.2.4_add_no_dualpol",
+    16: "v0.2.5_add_no_dualpol",
+}
+assert args.train_dataset in DATASETS, "Unknown training dataset. Program ending."
+DATASET = DATASETS[args.train_dataset] # e.g. v0.2.0_standard
+DATASET_VERSION = DATASET.split("_")[0] # e.g. v0.2.0
+JSON_ROOT = f"/work/pi_drsheldon_umass_edu/roosts/datasets/roosts_{DATASET_VERSION}"
+DATASET_JSON = os.path.join(JSON_ROOT, f"roosts_{DATASET_VERSION}.json")
+SPLIT_JSON = os.path.join(JSON_ROOT, f"roosts_{DATASET}_splits.json")
+print(f"Training with {DATASET}.")
 
 SPLITS = ["train"]  # "val", "test"
-ARRAY_DIR = "/mnt/nfs/datasets/RadarNPZ"
+ARRAY_DIR = "/work/pi_drsheldon_umass_edu/roosts/RadarNPZ"
 CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5)]
 NORMALIZERS = {
     'reflectivity':              pltc.Normalize(vmin=  -5, vmax= 35),
@@ -209,10 +197,11 @@ def get_roost_dicts(split):
     for scan_id in scan_list:
         if "v0.1.0" in DATASET:
             array_path = os.path.join(ARRAY_DIR, "v0.1.0", dataset["scans"][scan_id]["array_path"])
-        elif "v0.2.0" in DATASET:
-            array_path = os.path.join(
-                ARRAY_DIR, dataset["scans"][scan_id]["dataset_version"], dataset["scans"][scan_id]["array_path"]
-            )
+        elif "v0.2" in DATASET: # TODO: hard coded
+            if dataset["scans"][scan_id]["dataset_version"] == "v0.1.0":
+                array_path = os.path.join(ARRAY_DIR, "v0.1.0", dataset["scans"][scan_id]["array_path"])
+            else: # datasets v0.2.B all share the arrays v0.2.0
+                array_path = os.path.join(ARRAY_DIR, "v0.2.0", dataset["scans"][scan_id]["array_path"])
         scan_id_to_idx[scan_id] = idx
         dataset_dicts.append({
             "file_name": array_path,
@@ -224,8 +213,7 @@ def get_roost_dicts(split):
         idx += 1
 
     for anno in dataset["annotations"]:
-        if args.train_dataset in NO_BAD_TRACK_DATASET_VERSIONS and anno['subcategory'] == 'bad-track': continue
-        if args.train_dataset in NO_MISS_DAY_DATASET_VERSIONS and anno['day_notes'] == 'miss': continue
+        if "v0.1.0" not in DATASET and anno['subcategory'] == 'bad-track': continue # skip bad tracks
 
         if anno["scan_id"] in scan_id_to_idx:
             dataset_dicts[scan_id_to_idx[anno["scan_id"]]]["annotations"].append({
@@ -233,9 +221,10 @@ def get_roost_dicts(split):
                          anno["bbox"][2] + anno["bbox"][0],
                          anno["bbox"][3] + anno["bbox"][1]],
                 "bbox_mode": BoxMode.XYXY_ABS,
-                "segmentation": [],
+                # "segmentation": [],
                 "category_id": 0,
             })
+
     return dataset_dicts
 
 for d in SPLITS:
