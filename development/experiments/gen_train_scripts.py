@@ -3,6 +3,8 @@ import os
 import pdb
 import sys
 
+GPU_NODES_TO_EXCLUDE = "gypsum-gpu[030,035,039,096,097,098,122,146]"
+
 EXP_GROUP_NAME = '09'
 ROOT = EXP_GROUP_NAME
 MAX_ITER = 150000
@@ -61,10 +63,10 @@ for seed in SEED:
                                 f' --checkpoint_period {CKPT_PERIOD} --output_dir {output_dir}',
                             ))
                         )
-                    partition = "gypsum-titanx-phd" if exp_idx < 40 else "gypsum-1080ti-phd"
+                    partition = "gypsum-titanx-phd" if exp_idx < 40 else "gypsum-1080ti-phd" # TODO
                     launch_file.write(
                         f'sbatch -o {slurm_dir}/{exp_name}_%J.out '
-                        f'-p {partition} --exclude=gypsum-gpu097,gypsum-gpu098 --gres=gpu:1 ' # TODO: exclude
+                        f'-p {partition} --exclude={GPU_NODES_TO_EXCLUDE} --gres=gpu:1 '
                         f'--mem=100000 {script_path}\n'
                     )
                     exp_idx += 1

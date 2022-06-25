@@ -71,7 +71,7 @@ SPLIT_JSON = os.path.join(JSON_ROOT, f"roosts_{DATASET}_splits.json")
 print(f"Training with {DATASET}.")
 
 SPLITS = ["train"]  # "val", "test"
-ARRAY_DIR = "/work/pi_drsheldon_umass_edu/roosts/RadarNPZ"
+ARRAY_DIR = "/gypsum/datasets/RadarNPZ" # "/work/pi_drsheldon_umass_edu/roosts/RadarNPZ"
 CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5)]
 NORMALIZERS = {
     'reflectivity':              pltc.Normalize(vmin=  -5, vmax= 35),

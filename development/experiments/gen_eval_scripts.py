@@ -3,35 +3,34 @@ import os
 import pdb
 import sys
 
-EXP_GROUP_NAME = "07" # "08"
+GPU_NODES_TO_EXCLUDE = "gypsum-gpu[030,035,039,096,097,098,122,146]"
+
+EXP_GROUP_NAME = "09"
 ROOT = EXP_GROUP_NAME
-CKPTS = range(39999, 40000, 5000)
-# CKPTS = range(29999, 50000, 5000)
+CKPTS = range(24999, 150000, 50000) # [99999]
 EVAL_STRATEGY = 1 # ignore <15x15 in 1200x1200
 
-EXPDIR_TESTDATA = [
-    ("resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-    ("resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 2),
-    ("resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 3),
-    ("resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 4),
-]
 # EXPDIR_TESTDATA = [
-#     ("08_1_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-#     ("08_1_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-#     ("08_1_seed3_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-#     ("08_2_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-#     ("08_2_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-#     ("08_3_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-#     ("08_3_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-#     ("08_4_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-#     ("08_4_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-#     ("08_5_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-#     ("08_5_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-#     ("08_6_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 4),
-#     ("08_6_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 4),
+#     (f"09_16_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
 # ]
-EXCEPTION = [
-    # (69999, "resnet50-FPN_noptr_anc6_imsz1200_lr0.001_it150k"),
+EXPDIR_TESTDATA = [
+    (f"09_{i}_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", j) for i in range(1, 8) for j in range(1, 5)
+]
+EXPDIR_TESTDATA.extend([
+    (f"09_{i}_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", i) for i in range(8, 12)
+])
+EXPDIR_TESTDATA.extend([
+    (f"09_{i}_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1) for i in range(12, 17)
+])
+EXCEPTIONS = [
+    "09_3_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
+    "09_4_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
+    "09_11_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
+    "09_12_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
+    "09_7_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
+    "09_15_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
+    "09_7_seed3_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
+    "09_8_seed3_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
 ]
 
 
@@ -52,7 +51,7 @@ for (exp_name, test_dataset) in EXPDIR_TESTDATA:
     anchor_strategy = exp_name.split("_anc")[1].split("_")[0]
 
     for i in CKPTS:
-        if (i, exp_name) in EXCEPTION: continue
+        if exp_name in EXCEPTIONS: continue
         ckpt_path = os.path.join(log_dir, exp_name, f"model_{i:07d}.pth")
         if os.path.exists(ckpt_path):
             eval_name = f"eval{test_dataset}_{exp_name}_ckpt{i}_strt{EVAL_STRATEGY}"
@@ -74,15 +73,16 @@ for (exp_name, test_dataset) in EXPDIR_TESTDATA:
                             f' --output_dir {output_dir}',
                     ))
                 )
-            if exp_idx < 4:
-                partition = "rtx8000-short"
-            elif exp_idx < 14:
-                partition = "2080ti-short"
+            if exp_idx < 0:
+                partition = "gypsum-m40-phd"
+            elif exp_idx < 40:
+                partition = "gypsum-titanx-phd"
             else:
-                partition = "1080ti-short"
+                partition = "gypsum-1080ti-phd" # TODO
             launch_file.write(
                 f'sbatch -o {slurm_dir}/{eval_name}_%J.out '
-                f'-p {partition} --exclude=node097,node122,node123 --gres=gpu:1 --mem=100000 {script_path}\n'
+                f'-p {partition} --exclude={GPU_NODES_TO_EXCLUDE} --gres=gpu:1 '
+                f'--mem=100000 {script_path}\n'
             )
             exp_idx += 1
 
