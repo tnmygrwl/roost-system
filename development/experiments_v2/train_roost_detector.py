@@ -18,8 +18,6 @@ from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.visualizer import Visualizer
 from detectron2.utils.logger import setup_logger
 
-import adaptors_fpn
-from adaptors_fpn import CustomResize
 
 ########## args ##########
 parser = argparse.ArgumentParser(description='Roost detection')
@@ -29,9 +27,6 @@ parser.add_argument('--flip', action='store_true', help='flip to augment')
 parser.add_argument('--rotate', action='store_true', help='rotate to augment')
 parser.add_argument('--filter_empty', action='store_true', help='ignore scans without annotations during training')
 parser.add_argument('--seed', default=1, type=int, help='random seed')
-
-parser.add_argument('--adaptor', default='None', type=str, help='adaptor: linear, multi-layer')
-parser.add_argument('--input_channels', default=3, type=int, help='number of input channels for adaptor')
 
 parser.add_argument('--network', required=True, type=str, help='detection model backbone')
 parser.add_argument('--pretrain', default='det', type=str, help='init with no, cls, or det pretraining')
@@ -49,76 +44,35 @@ args = parser.parse_args()
 print(args)
 setup_logger(output=os.path.join(args.output_dir, "train.log")) # partly repetitive of slurm logs
 
-if args.train_dataset == 1:
-    DATASET = "roosts_v0.1.0"
-    print("Training with the roosts_v0.1.0 train split.")
-elif args.train_dataset == 2:
-    DATASET = "roosts_v0.2.0_all_nmd_nbt"
-    print("Training with the roosts_v0.2.0 all train split. No miss day, no bad track.")
-elif args.train_dataset == 3:
-    DATASET = "roosts_v0.2.0_all_md_nbt"
-    print("Training with the roosts_v0.2.0 all train split. Keeping miss day, no bad track.")
-elif args.train_dataset == 4:
-    DATASET = "roosts_v0.2.0_all_nmd_bt"
-    print("Training with the roosts_v0.2.0 all train split. No miss day, keeping bad track.")
-elif args.train_dataset == 5:
-    DATASET = "roosts_v0.2.0_all_md_bt"
-    print("Training with the roosts_v0.2.0 all train split. Keeping miss day, keeping bad track.")
-elif args.train_dataset == 6:
-    DATASET = "roosts_v0.2.0_dualpol"
-    print("Training with the roosts_v0.2.0 dualpol train split. Keeping miss day, no bad track.")
-else:
-    print("Unknown training dataset. Program ending.")
-
-if "v0.1.0" in DATASET:
-    JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.1.0"
-    DATASET_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0.json")
-elif "v0.2.0" in DATASET:
-    JSON_ROOT = "/mnt/nfs/work1/smaji/wenlongzhao/roosts/datasets/roosts_v0.2.0"
-    DATASET_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0.json")
-
-if "v0.1.0" in DATASET:
-    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.1.0_standard_splits.json")
-elif "v0.2.0_all" in DATASET:
-    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0_all_splits.json")
-elif "v0.2.0_dualpol" in DATASET:
-    SPLIT_JSON = os.path.join(JSON_ROOT, "roosts_v0.2.0_dualpol_splits.json")
-
-NO_BAD_TRACK_DATASET_VERSIONS = [2, 3, 6]
-NO_MISS_DAY_DATASET_VERSIONS = [2, 4]
+DATASETS = {
+    1: "v0.1.0_standard",
+    2: "v0.2.0_no_dualpol",
+    3: "v0.2.0_dualpol",
+    4: "v0.2.0_standard",
+    5: "v0.2.0_add_no_dualpol",
+    6: "v0.2.0_add_dualpol",
+    7: "v0.2.0_add_standard",
+    8: "v0.2.0_station1",
+    9: "v0.2.0_station2",
+    10: "v0.2.0_station3",
+    11: "v0.2.0_station4",
+    12: "v0.2.1_add_no_dualpol",
+    13: "v0.2.2_add_no_dualpol",
+    14: "v0.2.3_add_no_dualpol",
+    15: "v0.2.4_add_no_dualpol",
+    16: "v0.2.5_add_no_dualpol",
+}
+assert args.train_dataset in DATASETS, "Unknown training dataset. Program ending."
+DATASET = DATASETS[args.train_dataset] # e.g. v0.2.0_standard
+DATASET_VERSION = DATASET.split("_")[0] # e.g. v0.2.0
+JSON_ROOT = f"/work/pi_drsheldon_umass_edu/roosts/datasets/roosts_{DATASET_VERSION}"
+DATASET_JSON = os.path.join(JSON_ROOT, f"roosts_{DATASET_VERSION}.json")
+SPLIT_JSON = os.path.join(JSON_ROOT, f"roosts_{DATASET}_splits.json")
+print(f"Training with {DATASET}.")
 
 SPLITS = ["train"]  # "val", "test"
-ARRAY_DIR = "/mnt/nfs/datasets/RadarNPZ"
-
-if args.input_channels == 1:
-    CHANNELS = [("reflectivity", 0.5)]
-elif args.input_channels == 2:
-    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5)]
-elif args.input_channels == 3:
-    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5)]
-elif args.input_channels == 4:
-    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5), ("spectrum_width", 0.5)]
-elif args.input_channels == 6:
-    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
-                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5)]
-elif args.input_channels == 9:
-    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
-                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5),
-                ("reflectivity", 2.5), ("velocity", 2.5), ("spectrum_width", 2.5)]
-elif args.input_channels == 12:
-    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
-                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5),
-                ("reflectivity", 2.5), ("velocity", 2.5), ("spectrum_width", 2.5),
-                ("reflectivity", 3.5), ("velocity", 3.5), ("spectrum_width", 3.5)]
-elif args.input_channels == 15:
-    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
-                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5),
-                ("reflectivity", 2.5), ("reflectivity", 3.5), ("velocity", 2.5),
-                ('velocity', 3.5), ("spectrum_width", 2.5), ("spectrum_width", 3.5),
-                ("reflectivity", 4.5), ("velocity", 4.5), ("spectrum_width", 4.5)]
-else:
-    sys.exit('number of channels <%d> not in list' % (args.input_channels))
-
+ARRAY_DIR = "/gypsum/datasets/RadarNPZ" # "/work/pi_drsheldon_umass_edu/roosts/RadarNPZ"
+CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5)]
 NORMALIZERS = {
     'reflectivity':              pltc.Normalize(vmin=  -5, vmax= 35),
     'velocity':                  pltc.Normalize(vmin= -15, vmax= 15),
@@ -219,20 +173,6 @@ cfg.SOLVER.MAX_ITER = args.max_iter # default 40k, 1x 90k, 3x 270k
 # cfg.SOLVER.STEPS = (int(.75 * args.max_iter), int(.90 * args.max_iter)) # default 30k, 1x (60k, 80k), 3x (210k, 250k)
 cfg.OUTPUT_DIR = args.output_dir
 
-####################################################
-#### GPS: when using adaptors ######################
-####################################################
-if args.adaptor != 'None':
-    cfg.MODEL.BACKBONE.NAME = 'custom_build_resnet_fpn_backbone'
-    cfg.ADAPTOR_TYPE = args.adaptor
-    cfg.ADAPTOR_IN_CHANNELS = len(CHANNELS) * 3
-    cfg.MODEL.PIXEL_MEAN = []
-    cfg.MODEL.PIXEL_STD = []
-    for i in range(cfg.ADAPTOR_IN_CHANNELS):
-        cfg.MODEL.PIXEL_MEAN.append(127.5)
-        cfg.MODEL.PIXEL_STD.append(1.0)
-    # cfg.MODEL.BACKBONE.FREEZE_AT = 0 # GPS: to unfreeze all layers (default=2)
-
 random.seed(args.seed)
 os.environ['PYTHONHASHSEED'] = str(args.seed)
 np.random.seed(args.seed)
@@ -255,40 +195,17 @@ def get_roost_dicts(split):
     scan_id_to_idx = {}
     idx = 0
     for scan_id in scan_list:
-        # GPS: calculate neighbor frames indices
-        neighbor_frame_id = []
-        current_day = dataset["scans"][scan_id]['key'].split('_')[0][-2::]
-        if scan_id == 0: # GPS: repeat current frame
-            neighbor_frame_id.append(idx)
-            neighbor_frame_id.append(idx)
-        elif scan_id == 1: # GPS: repeat previous frame
-            neighbor_frame_id.append(idx - 1)
-            neighbor_frame_id.append(idx - 1)
-        else:
-            previous_day = dataset["scans"][scan_id - 1]['key'].split('_')[0][-2::]
-            previous_day2 = dataset["scans"][scan_id - 2]['key'].split('_')[0][-2::]
-            if current_day != previous_day:
-                neighbor_frame_id.append(idx)
-                neighbor_frame_id.append(idx)
-            elif current_day != previous_day2:
-                neighbor_frame_id.append(idx - 1)
-                neighbor_frame_id.append(idx - 1)
-            else:
-                neighbor_frame_id.append(idx - 1)
-                neighbor_frame_id.append(idx - 2)
-
         if "v0.1.0" in DATASET:
             array_path = os.path.join(ARRAY_DIR, "v0.1.0", dataset["scans"][scan_id]["array_path"])
-        elif "v0.2.0" in DATASET:
-            array_path = os.path.join(
-                ARRAY_DIR, dataset["scans"][scan_id]["dataset_version"], dataset["scans"][scan_id]["array_path"]
-            )
+        elif "v0.2" in DATASET: # TODO: hard coded
+            if dataset["scans"][scan_id]["dataset_version"] == "v0.1.0":
+                array_path = os.path.join(ARRAY_DIR, "v0.1.0", dataset["scans"][scan_id]["array_path"])
+            else: # datasets v0.2.B all share the arrays v0.2.0
+                array_path = os.path.join(ARRAY_DIR, "v0.2.0", dataset["scans"][scan_id]["array_path"])
         scan_id_to_idx[scan_id] = idx
         dataset_dicts.append({
             "file_name": array_path,
             "image_id": scan_id,
-            "neighbor_id": neighbor_frame_id, # GPS: to track neighbor frame
-            "split": split, # GPS: to track the split
             "height": dataset["info"]["array_shape"][-1],
             "width": dataset["info"]["array_shape"][-2],
             "annotations": []
@@ -296,8 +213,7 @@ def get_roost_dicts(split):
         idx += 1
 
     for anno in dataset["annotations"]:
-        if args.train_dataset in NO_BAD_TRACK_DATASET_VERSIONS and anno['subcategory'] == 'bad-track': continue
-        if args.train_dataset in NO_MISS_DAY_DATASET_VERSIONS and anno['day_notes'] == 'miss': continue
+        if "v0.1.0" not in DATASET and anno['subcategory'] == 'bad-track': continue # skip bad tracks
 
         if anno["scan_id"] in scan_id_to_idx:
             dataset_dicts[scan_id_to_idx[anno["scan_id"]]]["annotations"].append({
@@ -305,19 +221,15 @@ def get_roost_dicts(split):
                          anno["bbox"][2] + anno["bbox"][0],
                          anno["bbox"][3] + anno["bbox"][1]],
                 "bbox_mode": BoxMode.XYXY_ABS,
-                "segmentation": [],
+                # "segmentation": [],
                 "category_id": 0,
             })
+
     return dataset_dicts
 
 for d in SPLITS:
     DatasetCatalog.register(f"{DATASET}_{d}", lambda d=d: get_roost_dicts(d))
     MetadataCatalog.get(f"{DATASET}_{d}").set(thing_classes=["roost"])
-
-# GPS: load datasets to load neighbor frames
-split_dicts = {}
-for d in SPLITS:
-    split_dicts[d] = get_detection_dataset_dicts(f"{DATASET}_{d}", filter_empty=args.filter_empty)
 
 if args.visualize:
     roost_metadata = MetadataCatalog.get(f"{DATASET}_train")
@@ -341,35 +253,15 @@ def mapper(dataset_dict):
     :param dataset_dict: Metadata of one image, in Detectron2 Dataset format.
     """
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
-    previous_dict = split_dicts[dataset_dict["split"]][dataset_dict["neighbor_id"][0]] # GPS: dict of previous frame
-    previous_dict2 = split_dicts[dataset_dict["split"]][dataset_dict["neighbor_id"][1]]
 
     array = np.load(dataset_dict["file_name"])["array"]
-    image = np.stack([NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :])
+    image = np.stack([NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :]) 
                       for (attr, elev) in CHANNELS], axis=-1)
     np.nan_to_num(image, copy=False, nan=0.0)
     image = (image * 255).astype(np.uint8)
-
-    # GPS: do the same with neighbor array (t-1) and concatenate with current frame
-    previous_array = np.load(previous_dict["file_name"])["array"]
-    previous_image = np.stack([NORMALIZERS[attr](previous_array[attributes.index(attr), elevations.index(elev), :, :])
-                               for (attr, elev) in CHANNELS], axis=-1)
-    np.nan_to_num(previous_image, copy=False, nan=0.0)
-    previous_image = (previous_image * 255).astype(np.uint8)
-    # GPS: same for t-2
-    previous_array2 = np.load(previous_dict2["file_name"])["array"]
-    previous_image2 = np.stack([NORMALIZERS[attr](previous_array2[attributes.index(attr), elevations.index(elev), :, :])
-                                for (attr, elev) in CHANNELS], axis=-1)
-    np.nan_to_num(previous_image2, copy=False, nan=0.0)
-    previous_image2 = (previous_image2 * 255).astype(np.uint8)
-
-    # GPS: concatenate all time-frames
-    image = np.concatenate((previous_image2, previous_image, image), axis=2)
-
     aug_input = T.AugInput(image)
 
-    augs = [CustomResize((args.imsize, args.imsize))] # GPS: default interp=Image.BILINEAR
-    # augs = [T.Resize((args.imsize, args.imsize))]
+    augs = [T.Resize((args.imsize, args.imsize))]
     if args.flip: augs.append(T.RandomFlip())
     if args.rotate: augs.append(T.RandomRotation(angle=[0, 90, 180, 270], expand=False, sample_style="choice"))
     augs = T.AugmentationList(augs)
@@ -392,7 +284,6 @@ class CustomTrainer(engine.DefaultTrainer):
     @classmethod
     def build_train_loader(cls, cfg):
         return build_detection_train_loader(cfg, mapper=mapper)
-
     @classmethod
     def build_test_loader(cls, cfg, dataset_name=f'{DATASET}_test'):
         return build_detection_test_loader(cfg, dataset_name, mapper=mapper)
@@ -405,3 +296,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

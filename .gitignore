@@ -1,9 +1,6 @@
 # Manual Additions
 roosts_data/
 tools/slurm/
-development/custom_eval/*
-!development/custom_eval/precision_recall_curve.ipynb
-!development/custom_eval/sanity_check.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

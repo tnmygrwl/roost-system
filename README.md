@@ -25,19 +25,19 @@ Roost detection is based on [Detectron2](https://github.com/darkecology/detectro
     - **utc_to_local_time.py** takes in web ui files and append local time to each line
 
 #### Installation
-1. Find a compatible PyTorch version 
-[here](https://pytorch.org/get-started/previous-versions/) 
-or [here](https://download.pytorch.org/whl/torch_stable.html).
+1. See Detectron2 requirements
+[here](https://detectron2.readthedocs.io/en/latest/tutorials/install.html).
+Find a compatible pytorch version
+[here](https://pytorch.org/get-started/previous-versions/).
 To run detection with GPU, check the cuda version at, for example, `/usr/local/cuda`, or potentially by `nvcc -V`. 
     ```bash
-    conda create -n roostsys python=3.6
+    conda create -n roostsys python=3.8
     conda activate roostsys
-   
-    # for development and inference with gpus, use the gpu version of torch; we assume cuda 10.1 here
-    pip install torch==1.7.1+cu101 torchvision==0.8.2+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+    
+    # for development and inference with gpus, use the gpu version of torch; we assume cuda 11.3 here
+    conda install pytorch==1.10.0 torchvision==0.11.0 cudatoolkit=11.3 -c pytorch -c conda-forge
     # for inference with cpus, use the cpu version of torch
-    # pip install torch==1.7.1+cpu torchvision==0.8.2+cpu -f https://download.pytorch.org/whl/torch_stable.html
-    # pip install torch==1.7.1 torchvision==0.8.2 -f https://download.pytorch.org/whl/torch_stable.html
+    # conda install pytorch==1.10.0 torchvision==0.11.0 cpuonly -c pytorch
     
     git clone https://github.com/darkecology/roost-system.git
     cd roost-system
@@ -66,7 +66,7 @@ To run detection with GPU, check the cuda version at, for example, `/usr/local/c
 generating json files to define datasets with annotations), refer to 
 **Installation** and **Dataset Preparation** in the README of 
 [wsrdata](https://github.com/darkecology/wsrdata.git).
-- Before training, run **try_load_arrays.py** to make sure there's no broken npz files.
+- Before training, optionally run **try_load_arrays.py** to make sure there's no broken npz files.
 
 #### Run Inference
 Inference can be run using CPU-only servers.
@@ -98,6 +98,11 @@ For example, DET_CFG can be changed to adopt a new detector.
 
 5. In **tools**, run `python launch_demo.py` 
 to submit jobs to slurm and process multiple batches of data.
+
+#### Deployment Log
+- v1: Beginning of Summer 2021 Zezhou model.
+- v2: End of Summer 2021 Wenlong model with 48 AP. Good backbone, anchors, etc.
+- v3: End of Winter 2021 Gustavo model with 55 AP. Adapter layer and temporal features.
 
 #### Website Visualization
 In the generated csv files, the following information could be used to further filter the tracks: 

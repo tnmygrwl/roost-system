@@ -96,9 +96,9 @@ class RoostSystem():
 
         ######################### (4) Run tracking on the detections #########################
         """
-            in some cases, the detector does not find any roosts,
-            therefore, we need "scan_names" (a name list of all scans) to let the tracker find some using tracking info
-            NMS over tracks is applied to remove duplicated tracks, not sure if it's useful with new detection model
+            In some scans, the detector does not find any roosts;
+            we use "scan_names" (a name list of all scans) to allow the tracker to find some.
+            NMS over tracks is applied to remove duplicated tracks, not sure if it's useful with new detection model.
         """
         tracked_detections, tracks = self.tracker.tracking(scan_names, copy.deepcopy(detections))
         logger.info(f'[Tracking Done] {len(tracks)} tracks with {len(tracked_detections)} tracked detections')

@@ -3,32 +3,32 @@ import os
 import pdb
 import sys
 
-GPU_NODES_TO_EXCLUDE = "gypsum-gpu[030,035,039,096,097,098,122,146]"
+GPU_NODES_TO_EXCLUDE = "gypsum-gpu[030,035,039,096,097,098,099,122,146]"
 
 EXP_GROUP_NAME = "09"
 ROOT = EXP_GROUP_NAME
-CKPTS = range(24999, 150000, 50000) # [99999]
+CKPTS = [99999] # range(24999, 150000, 25000) # [99999]
 EVAL_STRATEGY = 1 # ignore <15x15 in 1200x1200
 
-# EXPDIR_TESTDATA = [
-#     (f"09_16_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1),
-# ]
 EXPDIR_TESTDATA = [
-    (f"09_{i}_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", j) for i in range(1, 8) for j in range(1, 5)
+    (f"09_3_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 4)
 ]
-EXPDIR_TESTDATA.extend([
-    (f"09_{i}_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", i) for i in range(8, 12)
-])
-EXPDIR_TESTDATA.extend([
-    (f"09_{i}_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1) for i in range(12, 17)
-])
+# EXPDIR_TESTDATA = [
+#     (f"09_{i}_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", j) for i in [3, 4] for j in range(1, 5)
+# ]
+# EXPDIR_TESTDATA.extend([
+#     (f"09_{i}_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", i) for i in [11] #range(8, 12)
+# ])
+# EXPDIR_TESTDATA.extend([
+#     (f"09_{i}_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 1) for i in [12, 15] #range(12, 17)
+# ])
 EXCEPTIONS = [
     "09_3_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
     "09_4_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
     "09_11_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
     "09_12_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
-    "09_7_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
     "09_15_seed1_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
+    "09_7_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
     "09_7_seed3_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
     "09_8_seed3_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k",
 ]
@@ -75,7 +75,7 @@ for (exp_name, test_dataset) in EXPDIR_TESTDATA:
                 )
             if exp_idx < 0:
                 partition = "gypsum-m40-phd"
-            elif exp_idx < 40:
+            elif exp_idx < 0:
                 partition = "gypsum-titanx-phd"
             else:
                 partition = "gypsum-1080ti-phd" # TODO
