@@ -1,6 +1,6 @@
 # Detecting and Tracking Communal Bird Roosts in Weather Radar Data
 This repo implements a machine learning system for detecting and tracking communal bird roosts 
-in weather surveillance radar data, continuing work by Cheng et al. [1].
+in weather surveillance radar data.
 Roost detection is based on [Detectron2](https://github.com/darkecology/detectron2) using PyTorch.
 
 #### Repository Overview
@@ -69,6 +69,8 @@ generating json files to define datasets with annotations), refer to
 - Before training, optionally run **try_load_arrays.py** to make sure there's no broken npz files.
 
 #### Run Inference
+A Colab notebook for running small-scale inference is 
+[here](https://colab.research.google.com/drive/1UD6qtDSAzFRUDttqsUGRhwNwS0O4jGaY?usp=sharing).
 Inference can be run using CPU-only servers.
 1. Under **checkpoints**, download a trained detection checkpoint.
 
@@ -86,7 +88,13 @@ Review the updated AWS config.
 3. Modify **demo.py** for system customization. 
 For example, DET_CFG can be changed to adopt a new detector.
 
-4. In **tools**, modify VARIABLES in **launch_demo.py**. 
+4. Then there are two cases. 
+In the first, we process a number of consecutive days at stations
+(one job for each set of continuous days at a station):
+modify VARIABLES in **tools/launch_demo.py**.
+In the second, we process a number of scattered days at stations 
+(one job for all days from each station instead of each scattered day-station):
+modify VARIABLES in **tools/gen_deploy_station_days_scripts.py**.
     1. EXPERIMENT_NAME needs to be carefully chosen; 
     it'll correspond to the dataset name later used in the website.
     2. If there are previous batches processed for this EXPERIMENT_NAME 
@@ -96,10 +104,16 @@ For example, DET_CFG can be changed to adopt a new detector.
     copy the new data to the server hosting the website, 
     previous data don't need to be copied again.
 
-5. In **tools**, run `python launch_demo.py` 
-to submit jobs to slurm and process multiple batches of data.
+5. In the first case, under **tools**, run `python launch_demo.py` 
+to submit jobs to slurm and process multiple batches of data. 
+In the second, under **tools**, run `python gen_deploy_station_days_scripts.py` and
+then `bash scripts/launch_deploy_station_days_scripts.sh`.
+The txt files about scans and tracks generated for the UI are still per station-day: 
+need to combine days from each station into a batch later; 
+pay special attention to make sure track ids are not duplicated.
 
 #### Deployment Log
+Model checkpoints are available [here](https://drive.google.com/drive/folders/1ApVX-PFYVzRn4lgTZPJNFDHnUbhfcz6E?usp=sharing).
 - v1: Beginning of Summer 2021 Zezhou model.
 - v2: End of Summer 2021 Wenlong model with 48 AP. Good backbone, anchors, etc.
 - v3: End of Winter 2021 Gustavo model with 55 AP. Adapter layer and temporal features.
@@ -115,3 +129,8 @@ In the generated csv files, the following information could be used to further f
 [1] [Detecting and Tracking Communal Bird Roosts in Weather Radar Data.](https://people.cs.umass.edu/~zezhoucheng/roosts/radar-roosts-aaai20.pdf)
 Zezhou Cheng, Saadia Gabriel, Pankaj Bhambhani, Daniel Sheldon, Subhransu Maji, Andrew Laughlin and David Winkler.
 AAAI, 2020 (oral presentation, AI for Social Impact Track).
+
+[2] Using Spatio-Temporal Information in Weather Radar Data to Detect and Track Communal Bird Roosts. 
+Gustavo Perez, Wenlong Zhao, Zezhou Cheng, Maria Carolina T. D. Belotti, Yuting Deng, 
+Victoria F. Simons, Elske Tielens, Jeffrey F. Kelly, 
+Kyle G. Horton, Subhransu Maji, Daniel Sheldon. Preprint.
