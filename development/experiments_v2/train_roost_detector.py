@@ -284,6 +284,7 @@ class CustomTrainer(engine.DefaultTrainer):
     @classmethod
     def build_train_loader(cls, cfg):
         return build_detection_train_loader(cfg, mapper=mapper)
+
     @classmethod
     def build_test_loader(cls, cfg, dataset_name=f'{DATASET}_test'):
         return build_detection_test_loader(cfg, dataset_name, mapper=mapper)
@@ -296,4 +297,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
