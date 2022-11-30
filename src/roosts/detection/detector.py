@@ -10,15 +10,16 @@ from geotiff import GeoTiff
 
 class Detector:
 
-    def __init__(self, 
-                 ckpt_path,         # path of pretrained detector
-                 imsize,            # input image size
-                 anchor_sizes,      # predefined anchor sizes
-                 nms_thresh,        # non-maximum suppression
-                 score_thresh,      # filter out detections with score lower than score_thresh
-                 config_file,       # define the detection model
-                 use_gpu,           # GPU or CPU
-                 version = "v2",
+    def __init__(
+            self,
+            ckpt_path,         # path of pretrained detector
+            imsize,            # input image size
+            anchor_sizes,      # predefined anchor sizes
+            nms_thresh,        # non-maximum suppression
+            score_thresh,      # filter out detections with score lower than score_thresh
+            config_file,       # define the detection model
+            use_gpu,           # GPU or CPU
+            version = "v2",
     ):
 
         cfg = get_cfg()
@@ -39,7 +40,7 @@ class Detector:
             self.predictor = DefaultPredictor(cfg)
         elif version == "v3":
             import roosts.detection.adaptors_fpn as adaptors_fpn
-            cfg.MODEL.BACKBONE.NAME = "custom_build_resnet_fpn_backbone"
+            cfg.MODEL.BACKBONE.NAME = "build_adaptor_resnet_fpn_backbone"
             cfg.ADAPTOR_TYPE = "linear"
             cfg.ADAPTOR_IN_CHANNELS = 9
             cfg.MODEL.PIXEL_MEAN = []
@@ -90,7 +91,7 @@ class Detector:
                 elif self.version == "v3":
                     if idx == 0:
                         file_list = [file, file, file]
-                    if idx == 1:
+                    elif idx == 1:
                         file_list = [files[0], files[0], file]
                     else:
                         file_list = [files[idx - 2], files[idx - 1], file]

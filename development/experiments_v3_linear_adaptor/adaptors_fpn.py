@@ -1,24 +1,21 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 import sys
 import math
+import numpy as np
+from PIL import Image
+from fvcore.transforms.transform import Transform
 import fvcore.nn.weight_init as weight_init
-import torch.nn.functional as F
-
 import torch
 from torch import nn
 import torch.nn.functional as F
 
+from detectron2.data import transforms as T
 from detectron2.layers import Conv2d, ShapeSpec, get_norm
-
-import detectron2.data.transforms as T
 from detectron2.modeling.backbone import Backbone
 from detectron2.modeling.backbone.build import BACKBONE_REGISTRY
 from detectron2.modeling.backbone.resnet import build_resnet_backbone
 
-from PIL import Image
-from fvcore.transforms.transform import Transform
-
-__all__ = ["build_resnet_fpn_backbone", "build_retinanet_resnet_fpn_backbone", "FPN"]
+__all__ = ["build_adaptor_resnet_fpn_backbone", "build_adaptor_retinanet_resnet_fpn_backbone", "Adaptor_FPN"]
 
 
 ####################################################
@@ -61,7 +58,7 @@ class MultiLayerAdaptor(nn.Module):
         out = self.relu2(self.bn2(self.conv2(out)))
         out = self.relu7(self.bn7(self.conv7(out)))
         out = self.relu8(self.bn8(self.conv8(out)))
-        out -= self.mean.reshape(-1,1,1)
+        out -= self.mean.reshape(-1, 1, 1)
         return out
 
 
@@ -69,7 +66,7 @@ class MultiLayerAdaptor(nn.Module):
 #### GPS: custom backbone ##########################
 ####################################################
 
-class FPN(Backbone):
+class Adaptor_FPN(Backbone):
     """
     This module implements Feature Pyramid Network.
     It creates pyramid features built on top of some input feature maps.
@@ -102,7 +99,7 @@ class FPN(Backbone):
                 ones. It can be "sum" (default), which sums up element-wise; or "avg",
                 which takes the element-wise mean of the two.
         """
-        super(FPN, self).__init__()
+        super(Adaptor_FPN, self).__init__()
         assert isinstance(bottom_up, Backbone)
         
         # Feature map strides and channels from the bottom up network (e.g. ResNet)
@@ -197,7 +194,7 @@ class FPN(Backbone):
         for features, lateral_conv, output_conv in zip(
             x[1:], self.lateral_convs[1:], self.output_convs[1:]
         ):
-            top_down_features = F.interpolate(prev_features, scale_factor=2, mode="nearest")
+            top_down_features = F.interpolate(prev_features, scale_factor=2.0, mode="nearest")
             lateral_features = lateral_conv(features)
             prev_features = lateral_features + top_down_features
             if self._fuse_type == "avg":
@@ -268,7 +265,7 @@ class LastLevelP6P7(nn.Module):
 
 
 @BACKBONE_REGISTRY.register()
-def custom_build_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
+def build_adaptor_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
     """
     Args:
         cfg: a detectron2 CfgNode
@@ -276,12 +273,12 @@ def custom_build_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
         backbone (Backbone): backbone module, must be a subclass of :class:`Backbone`.
     """
     class input_shape(object): pass # GPS
-    input_shape.channels = 3 # GPS: to overridethe shape of the input array (4+ channels)
+    input_shape.channels = 3 # GPS: to override the shape of the input array (4+ channels)
 
     bottom_up = build_resnet_backbone(cfg, input_shape)
     in_features = cfg.MODEL.FPN.IN_FEATURES
     out_channels = cfg.MODEL.FPN.OUT_CHANNELS
-    backbone = FPN(
+    backbone = Adaptor_FPN(
         bottom_up=bottom_up,
         in_features=in_features,
         out_channels=out_channels,
@@ -295,7 +292,7 @@ def custom_build_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
 
 
 @BACKBONE_REGISTRY.register()
-def custom_build_retinanet_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
+def build_adaptor_retinanet_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
     """
     Args:
         cfg: a detectron2 CfgNode
@@ -309,7 +306,7 @@ def custom_build_retinanet_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
     in_features = cfg.MODEL.FPN.IN_FEATURES
     out_channels = cfg.MODEL.FPN.OUT_CHANNELS
     in_channels_p6p7 = bottom_up.output_shape()["res5"].channels
-    backbone = FPN(
+    backbone = Adaptor_FPN(
         bottom_up=bottom_up,
         in_features=in_features,
         out_channels=out_channels,
@@ -355,9 +352,11 @@ class CustomResizeTransform(Transform):
         Args:
             h, w (int): original image size
             new_h, new_w (int): new image size
-            interp: defaults to 1-spline.
+            interp: interpolation method
         """
         super().__init__()
+        if interp is None:
+            interp = Image.BILINEAR
         self._set_attributes(locals())
 
     def apply_image(self, img, interp=None):
@@ -365,7 +364,6 @@ class CustomResizeTransform(Transform):
         assert len(img.shape) <= 4
         interp_method = interp if interp is not None else self.interp
 
-        # PIL only supports uint8
         if any(x < 0 for x in img.strides):
             img = np.ascontiguousarray(img)
         img = torch.from_numpy(img).type(torch.FloatTensor)

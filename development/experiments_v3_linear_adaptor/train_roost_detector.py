@@ -305,9 +305,10 @@ def get_roost_dicts(split):
                          anno["bbox"][2] + anno["bbox"][0],
                          anno["bbox"][3] + anno["bbox"][1]],
                 "bbox_mode": BoxMode.XYXY_ABS,
-                "segmentation": [],
+                # "segmentation": [],
                 "category_id": 0,
             })
+
     return dataset_dicts
 
 for d in SPLITS:
