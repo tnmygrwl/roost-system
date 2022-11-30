@@ -5,10 +5,10 @@ NUM_CPUS = 7
 # station, start date (inclusive), end date (inclusive)
 # deployment
 STATIONS = ["KSJT", "KGRK", "KDFX", "KEWX"]
-TIMES = [
-    ("20120101", "20120331"), ("20120401", "20120630"), ("20120701", "20120930"), ("20121001", "20121231"),
-    ("20140101", "20140331"), ("20140401", "20140630"), ("20140701", "20140930"), ("20141001", "20141231"),
-]
+TIMES = []
+for year in ["2011", "2010", "2009", "2008", "2007", "2006", "2005"]:
+    for (start_date, end_date) in [("0101", "0331"), ("0401", "0630"), ("0701", "0930"), ("1001", "1231")]:
+        TIMES.append((year+start_date, year+end_date))
 SUN_ACTIVITY = "sunset"
 MIN_BEFORE = 90
 MIN_AFTER = 150

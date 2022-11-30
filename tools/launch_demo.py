@@ -4,22 +4,27 @@ import time
 NUM_CPUS = 7
 # station, start date (inclusive), end date (inclusive)
 # greatlakes_test
-# STATIONS = ["KBUF", "KCLE", "KTYX"]
-# TIMES = [("20100201", "20100331"), ("20100801", "20100930"),
-#          ("20170201", "20170331"), ("20170801", "20170930"),]
+STATIONS = ["KBUF", "KCLE", "KTYX"]
+TIMES = [("20100201", "20100331"), ("20100801", "20100930"),
+         ("20170201", "20170331"), ("20170801", "20170930"),]
 # deployment
-STATIONS = ["KHGX", "KTLX"]
-TIMES = [("20210701", "20211031"),]
+# STATIONS_TIMES = [
+#     ("KLTX", "20100701", "20100701"),
+# ]
+
 SUN_ACTIVITY = "sunrise"
 MIN_BEFORE = 30
 MIN_AFTER = 90
 # directory for system outputs
-MODEL_VERSION = "v2"
-EXPERIMENT_NAME = f"polarimetric_202206_{MODEL_VERSION}"
+MODEL_VERSION = "v3"
+EXPERIMENT_NAME = f"all_stations_{MODEL_VERSION}"
 DATA_ROOT = f"/mnt/nfs/scratch1/wenlongzhao/roosts_data/{EXPERIMENT_NAME}"
 
-
-args_list = [(s, t[0], t[1]) for s in STATIONS for t in TIMES]
+try:
+    assert STATIONS_TIMES
+    args_list = STATIONS_TIMES
+except:
+    args_list = [(s, t[0], t[1]) for s in STATIONS for t in TIMES]
 for args in args_list:
     station = args[0]
     start = args[1]
@@ -43,7 +48,7 @@ for args in args_list:
     --cpus-per-task={NUM_CPUS} \
     --mem-per-cpu=2000 \
     --partition=longq \
-    --time=2-00:00:00 \
+    --time=4-00:00:00 \
     demo.sbatch \
     --station {station} --start {start} --end {end} \
     --sun_activity {SUN_ACTIVITY} --min_before {MIN_BEFORE} --min_after {MIN_AFTER} \

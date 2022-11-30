@@ -9,6 +9,7 @@ install_requires = [
     "pytz==2021.1",             # time zone, 2021.1
     "ephem==3.7.7.1",           # 3.7.7.1
     "geopy==2.1.0",             # 2.1.0
+    "geotiff",                  # for tiff data, generally not used
     ### system ###
     'wsrlib @ git+https://github.com/darkecology/pywsrlib#egg=wsrlib', # 6ba705d
     'detectron2 @ git+https://github.com/facebookresearch/detectron2.git#egg=detectron2', # 0.6

@@ -88,29 +88,26 @@ Review the updated AWS config.
 3. Modify **demo.py** for system customization. 
 For example, DET_CFG can be changed to adopt a new detector.
 
-4. Then there are two cases. 
-In the first, we process a number of consecutive days at stations
-(one job for each set of continuous days at a station):
-modify VARIABLES in **tools/launch_demo.py**.
-In the second, we process a number of scattered days at stations 
-(one job for all days from each station instead of each scattered day-station):
-modify VARIABLES in **tools/gen_deploy_station_days_scripts.py**.
-    1. EXPERIMENT_NAME needs to be carefully chosen; 
-    it'll correspond to the dataset name later used in the website.
-    2. If there are previous batches processed for this EXPERIMENT_NAME 
-    (i.e. dataset to be loaded to the website),
-    we can move previously processed data at the output directory to another location. 
-    Then we can save the newly processed data at the same output directory; when we 
-    copy the new data to the server hosting the website, 
-    previous data don't need to be copied again.
+4. Then consider two deployment scenarios.
+   1. In the first, we process consecutive days at stations, i.e. we launch one job for 
+   each set of continuous days at a station. Modify VARIABLES in **tools/launch_demo.py**.
+   Then under **tools**, run `python launch_demo.py` 
+   to submit jobs to slurm and process multiple batches of data. 
 
-5. In the first case, under **tools**, run `python launch_demo.py` 
-to submit jobs to slurm and process multiple batches of data. 
-In the second, under **tools**, run `python gen_deploy_station_days_scripts.py` and
-then `bash scripts/launch_deploy_station_days_scripts.sh`.
-The txt files about scans and tracks generated for the UI are still per station-day: 
-need to combine days from each station into a batch later; 
-pay special attention to make sure track ids are not duplicated.
+   2. In the second, we process scattered days at stations, i.e. we launch one job for 
+   all days from each station. Modify VARIABLES in **tools/gen_deploy_station_days_scripts.py**. 
+   Under **tools**, run `python gen_deploy_station_days_scripts.py` and then 
+   `bash scripts/launch_deploy_station_days_scripts.sh`. Each output txt file save scans or tracks 
+   for one station-day: need to manually combine txt files for station-days from each same station.
+
+   3. GOTCHA 1: EXPERIMENT_NAME needs to be carefully chosen; 
+  it'll correspond to the dataset name later used in the web UI.
+   
+   4. GOTCHA 2: If there are previous batches processed under this EXPERIMENT_NAME 
+   (i.e. dataset to be loaded to the website), we can move previously processed data at 
+   the output directory to another location before saving newly processed data to this 
+   EXPERIMENT_NAME output directory. Thereby when we copy newly processed data to the server 
+   that hosts the web UI, previous data won't need to be copied again.
 
 #### Deployment Log
 Model checkpoints are available [here](https://drive.google.com/drive/folders/1ApVX-PFYVzRn4lgTZPJNFDHnUbhfcz6E?usp=sharing).
