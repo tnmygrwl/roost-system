@@ -4,7 +4,8 @@ import csv
 import time
 import pickle
 from sklearn.neighbors import NearestNeighbors
-from roosts.utils.geo_util import geo_dist_km, get_roost_coor, sun_activity_time
+from roosts.utils.geo_util import geo_dist_km, get_roost_coor
+from roosts.utils.time_util import scan_key_to_utc_time
 from tqdm import tqdm
 
 
@@ -14,14 +15,15 @@ class Postprocess():
         Populate the detections with geographic information (convert image coordinates to geographic coordinates)
     """
 
-    def __init__(self,
-                 imsize = 600, 
-                 geosize = 300000, # by default, the image size represents 300km
-                 sun_activity = None,
-                 nms = True,
-                 clean_windfarm = True,
-                 clean_rain = True,
-                 ): # this means large y coordinate indicate the North
+    def __init__(
+            self,
+            imsize = 600,
+            geosize = 300000, # by default, the image size represents 300km
+            sun_activity = None,
+            nms = True,
+            clean_windfarm = True,
+            clean_rain = True,
+    ):
 
         self.imsize = imsize
         self.geosize = geosize
@@ -37,38 +39,7 @@ class Postprocess():
             self.windfarm_ball_tree = self._build_ball_tree(windfarm_database)
 
 
-    def geo_converter(self, detections):
-        # convert image coordinates to geometric coordinates
-        for det in detections:
-            roost_xy = det["im_bbox"][:2] # image coordinate of roost center
-            # the following step is critical to get correct geographic coordinates
-            station_xy = (self.imsize / 2., self.imsize / 2.) # image coordinate of radar station
-            station_name = det["scanname"][:4]
-            distance_per_pixel = self.geosize / self.imsize
-            roost_lon, roost_lat = get_roost_coor(roost_xy, station_xy, station_name, distance_per_pixel)
-            geo_radius = det["im_bbox"][2] * distance_per_pixel
-            det["geo_bbox"] = [roost_lon, roost_lat, geo_radius]
-        return detections
-
-    def add_sun_activity_time(self, detections, sun_activity):
-        for det in detections:
-            scanname = det["scanname"]
-            minute = int(scanname[13:15]) * 60 + int(scanname[15:17])
-            det[f"from_{sun_activity}"] = minute - sun_activity_time(scanname, sun_activity=sun_activity)
-        return detections  # the data should have been modified in place but just be safe
-
-    def filter_untracked_dets(self, detections, tracks):
-        det_dict = {}
-        for det in detections:
-            det_dict[det["det_ID"]] = det
-        new_detections = []
-        for track in tracks:
-            for det_ID in track["det_IDs"]:
-                new_detections.append(det_dict[det_ID])
-        return new_detections
-
     #################### Wind Farm ####################
-
     """ 
     load wind farm map if there is one wind farm inside the bbox, 
     then regard the bbox as wind farm
@@ -110,9 +81,9 @@ class Postprocess():
             return True
         else:
             return False
-       
-    #################### Precipitation ####################
 
+
+    #################### Precipitation ####################
     def _is_there_rain(self, box, dualpol):
         
         # bbox 
@@ -141,13 +112,36 @@ class Postprocess():
 
 
     #################### Post-processing ####################
+    def filter_untracked_dets(self, detections, tracks):
+        det_dict = {}
+        for det in detections:
+            det_dict[det["det_ID"]] = det
+        new_detections = []
+        for track in tracks:
+            for det_ID in track["det_IDs"]:
+                new_detections.append(det_dict[det_ID])
+        return new_detections
 
-    def annotate_detections(self, detections, tracks, npz_files):
-        """
-            Annotate detections in RAIN, WIND_FARM, BIRD; 
-            And populate the detections with geographic coordinates
-        """
+    def geo_converter(self, detections):
+        # convert image coordinates to geometric coordinates
+        for det in detections:
+            roost_xy = det["im_bbox"][:2]  # image coordinate of roost center
+            # the following step is critical to get correct geographic coordinates
+            station_xy = (self.imsize / 2., self.imsize / 2.)  # image coordinate of radar station
+            station_name = det["scanname"][:4]
+            distance_per_pixel = self.geosize / self.imsize
+            roost_lon, roost_lat = get_roost_coor(roost_xy, station_xy, station_name, distance_per_pixel)
+            geo_radius = det["im_bbox"][2] * distance_per_pixel
+            det["geo_bbox"] = [roost_lon, roost_lat, geo_radius]
+        return detections
 
+    def add_sun_activity_time(self, detections, sun_activity_time):
+        for det in detections:
+            sun_activity_offset = scan_key_to_utc_time(det["scanname"]) - sun_activity_time
+            det[f"from_{self.sun_activity}"] = sun_activity_offset.total_seconds() / 60
+        return detections  # the data should have been modified in place but just be safe
+
+    def annotate_detections(self, detections, tracks, npz_files, sun_activity_time):
         scan_dict = {}
         for npz_file in npz_files:
             scanname = os.path.splitext(os.path.basename(npz_file))[0]
@@ -158,7 +152,7 @@ class Postprocess():
         # convert image coordinates to geometric coordinates
         detections = self.geo_converter(detections)
         # populate detections with mins from sunrise/sunset time
-        detections = self.add_sun_activity_time(detections, self.sun_activity)
+        detections = self.add_sun_activity_time(detections, sun_activity_time)
 
         if self.nms:
             # use only tracks after NMS
@@ -191,7 +185,9 @@ class Postprocess():
                 radar_data = np.load(npz_file)
                 if "dualpol_array" in radar_data.files:
                     dualpol = radar_data["dualpol_array"]
-                    dualpol = dualpol[1, 0, ::-1, :] # flip the array, and use the correlation coef.
+                    dualpol = dualpol[1, 0, ::-1, :]
+                            # use correlation coefficient at the lowest elevation
+                            # flip the y axis, from geographical (big y means North) to image (big y means lower)
                 else:
                     dualpol = None
                 dualpol_data[scanname] = dualpol
@@ -239,8 +235,6 @@ class Postprocess():
 
 
 if __name__ == "__main__":
-    
-
     detections = [{'scanname':'KDOX20111010_071218_V06', 
                     'det_ID': 1, 
                     'det_score': 0.99, 

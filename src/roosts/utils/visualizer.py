@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import cv2
 import imageio
 import roosts.utils.file_util as fileUtil
-from roosts.utils.time_util import utc_to_local_time
+from roosts.utils.time_util import scan_key_to_local_time
 from tqdm import tqdm
 import itertools 
 
@@ -271,8 +271,7 @@ class Visualizer:
         imageio.mimsave(outpath, seq, "GIF", **kargs)
             
 
-    def generate_web_files(self, detections, tracks, outpath):
-        
+    def save_predicted_tracks(self, detections, tracks, outpath):
         det_dict = {}
         for det in detections:
             det_dict[det["det_ID"]] = det
@@ -280,14 +279,13 @@ class Visualizer:
         with open(outpath, 'a+') as f:
             n_tracks = 0
             for track in tqdm(tracks, desc="Write tracks into csv"):
-                
-                if (("is_windfarm" in track.keys() and track["is_windfarm"]) or 
+                if (("is_windfarm" in track.keys() and track["is_windfarm"]) or
                     ("is_rain" in track.keys() and track["is_rain"])):
                     continue
 
                 saved_track = False
                 # remove the tail of tracks (which are generated from Kalman filter instead of detector)
-                for idx in range(len(track["det_or_pred"])-1, -1, -1):
+                for idx in range(len(track["det_or_pred"]) - 1, -1, -1):
                     if track["det_or_pred"][idx]:
                         last_pred_idx = idx
                         break
@@ -296,12 +294,11 @@ class Visualizer:
                     if idx > last_pred_idx:
                         break
                     det = det_dict[det_ID]
-                    # if (("windfarm" in det.keys()) and det["windfarm"]):
-                    #    continue
-                    f.write('{:d},{:s},{:d},{:.3f},{:.2f},{:2f},{:2f},{:.2f},{:2f},{:2f},{:s}\n'.format(
-                        det["track_ID"], det["scanname"], int(det[f"from_{self.sun_activity}"]),
-                        det["det_score"], det["im_bbox"][0], det["im_bbox"][1], det["im_bbox"][2], 
-                        det["geo_bbox"][0], det["geo_bbox"][1], det["geo_bbox"][2], utc_to_local_time(det["scanname"])
+                    f.write('{:d},{:s},{:.3f},{:.3f},{:.3f},{:.3f},{:.3f},{:.3f},{:.3f},{:.3f},{:s}\n'.format(
+                        det["track_ID"], det["scanname"], det[f"from_{self.sun_activity}"], det["det_score"],
+                        det["im_bbox"][0], det["im_bbox"][1], det["im_bbox"][2],
+                        det["geo_bbox"][0], det["geo_bbox"][1], det["geo_bbox"][2],
+                        scan_key_to_local_time(det["scanname"])
                     ))
                     saved_track = True
                 if saved_track:

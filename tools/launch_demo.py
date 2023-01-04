@@ -3,16 +3,17 @@ import time
 
 NUM_CPUS = 7
 # station, start date (inclusive), end date (inclusive)
-# greatlakes_test
+# deployment
+# specify either
 STATIONS = ["KBUF", "KCLE", "KTYX"]
 TIMES = [("20100201", "20100331"), ("20100801", "20100930"),
          ("20170201", "20170331"), ("20170801", "20170930"),]
-# deployment
+# or
 # STATIONS_TIMES = [
 #     ("KLTX", "20100701", "20100701"),
 # ]
 
-SUN_ACTIVITY = "sunrise"
+SUN_ACTIVITY = "sunrise" # bird activities occur around sunrise
 MIN_BEFORE = 30
 MIN_AFTER = 90
 # directory for system outputs

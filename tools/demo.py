@@ -4,16 +4,15 @@ print(f"torch.get_num_threads: {torch.get_num_threads()}", flush=True)
 warnings.filterwarnings("ignore")
 
 from roosts.system import RoostSystem
-from roosts.utils.time_util import get_days_list
-from roosts.utils.sun_activity_util import get_sun_activity_time
+from roosts.utils.time_util import get_days_list, get_sun_activity_time
 from roosts.utils.s3_util import get_station_day_scan_keys
 
 here = os.path.dirname(os.path.realpath(__file__))
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--station', type=str, required=True, help="a single station name, eg. KDOX")
-parser.add_argument('--start', type=str, required=True, help="the first day to process, eg. 20101001")
-parser.add_argument('--end', type=str, required=True, help="the last day to process, eg. 20101001")
+parser.add_argument('--start', type=str, required=True, help="the first local date to process, eg. 20101001")
+parser.add_argument('--end', type=str, required=True, help="the last local date to process, eg. 20101001")
 parser.add_argument('--sun_activity', type=str, default="sunrise", help="time window around sunrise or sunset")
 parser.add_argument('--min_before', type=int, default=30,
                     help="process scans at most these minutes before the selected sun activity")
@@ -73,25 +72,28 @@ DIRS = {
 }
 
 ######################### Run #########################
-days = get_days_list(args.start, args.end)
-print("Total number of days: %d" % len(days), flush=True)
-
 roost_system = RoostSystem(args, DET_CFG, PP_CFG, DIRS)
+
+days = get_days_list(args.start, args.end) # timestamps that indicate the beginning of dates, no time zone info
+print("Total number of days: %d" % len(days), flush=True)
 for day_idx, day in enumerate(days):
     process_start_time = time.time()
 
     date_string = day.strftime('%Y%m%d')  # yyyymmdd
     print(f"-------------------- Day {day_idx+1}: {date_string} --------------------\n", flush=True)
 
-    sun_activity_time = get_sun_activity_time(args.station, day, sun_activity=args.sun_activity) # utc
+    sun_activity_time = get_sun_activity_time(args.station, day, args.sun_activity)
+            # utc timestamp for next local sun activity after the beginning of the local date
     start_time = sun_activity_time - timedelta(minutes=args.min_before)
     end_time = sun_activity_time + timedelta(minutes=args.min_after)
     keys = get_station_day_scan_keys(
-        start_time, end_time, args.station,
+        start_time,
+        end_time,
+        args.station,
         aws_access_key_id=args.aws_access_key_id,
         aws_secret_access_key=args.aws_secret_access_key,
-    )
-    keys = sorted(list(set(keys)))  # aws keys
+    )  # aws keys which uses UTC time: yyyy/mm/dd/ssss/ssssyyyymmdd_hhmmss*
+    keys = sorted(list(set(keys)))
 
-    roost_system.run_day_station(day, keys, process_start_time)
+    roost_system.run_day_station(day, sun_activity_time, keys, process_start_time)
 

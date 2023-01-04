@@ -71,7 +71,7 @@ generating json files to define datasets with annotations), refer to
 #### Run Inference
 A Colab notebook for running small-scale inference is 
 [here](https://colab.research.google.com/drive/1UD6qtDSAzFRUDttqsUGRhwNwS0O4jGaY?usp=sharing).
-Inference can be run using CPU-only servers.
+Large-scale deployment can be run on CPU servers as follows.
 1. Under **checkpoints**, download a trained detection checkpoint.
 
 2. [Configure AWS](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) by

@@ -19,7 +19,7 @@ class Detector:
             score_thresh,      # filter out detections with score lower than score_thresh
             config_file,       # define the detection model
             use_gpu,           # GPU or CPU
-            version = "v2",
+            version,           # detector version
     ):
 
         cfg = get_cfg()
@@ -70,18 +70,18 @@ class Detector:
         image_list = []
         for i in range(len(npz_paths)):
             array = np.load(npz_paths[i])["array"]
-            image_list.append(
-                np.stack([NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :])
-                          for (attr, elev) in CHANNELS], axis=-1)
-            )
+            image_list.append(np.stack([
+                NORMALIZERS[attr](array[attributes.index(attr), elevations.index(elev), :, :])
+                for (attr, elev) in CHANNELS
+            ], axis=-1))
         
         return np.concatenate(image_list, axis=2)
 
-    def run(self, files, file_type = "npz"):
+    def run(self, array_files, file_type = "npz"):
         
         outputs = []
         count = 0
-        for idx, file in enumerate(tqdm(files, desc="Detecting")):
+        for idx, file in enumerate(tqdm(array_files, desc="Detecting")):
             # extract scanname 
             name = os.path.splitext(os.path.basename(file))[0]
             # preprocess data
@@ -92,9 +92,9 @@ class Detector:
                     if idx == 0:
                         file_list = [file, file, file]
                     elif idx == 1:
-                        file_list = [files[0], files[0], file]
+                        file_list = [array_files[0], array_files[0], file]
                     else:
-                        file_list = [files[idx - 2], files[idx - 1], file]
+                        file_list = [array_files[idx - 2], array_files[idx - 1], file]
                 else:
                     raise NotImplementedError
                 data = self._preprocess_npz_file(file_list)
@@ -118,10 +118,12 @@ class Detector:
             bbox_xyr   = np.hstack((centers, radius))
             # reformat the detections
             for kk in range(len(scores)):
-                det = {"scanname" : name, 
-                       "det_ID"   : count,
-                       "det_score": scores[kk], # just in case we run detector on GPU
-                       "im_bbox"  : bbox_xyr[kk]}
+                det = {
+                    "scanname" : name, 
+                    "det_ID"   : count,
+                    "det_score": scores[kk],
+                    "im_bbox"  : bbox_xyr[kk]
+                }
                 count += 1
                 outputs.append(det)
 

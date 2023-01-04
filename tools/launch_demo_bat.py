@@ -3,23 +3,31 @@ import time
 
 NUM_CPUS = 7
 # station, start date (inclusive), end date (inclusive)
-# deployment
+# specify either
 STATIONS = ["KSJT", "KGRK", "KDFX", "KEWX"]
 TIMES = []
-for year in ["2011", "2010", "2009", "2008", "2007", "2006", "2005"]:
+for year in range(2000, 2007): # (2007, 2014) (2014, 2021)
     for (start_date, end_date) in [("0101", "0331"), ("0401", "0630"), ("0701", "0930"), ("1001", "1231")]:
         TIMES.append((year+start_date, year+end_date))
-SUN_ACTIVITY = "sunset"
+# or
+# STATION_TIMES = [
+#     ("KLTX", "20100701", "20100701"),
+# ]
+
+SUN_ACTIVITY = "sunset" # bat activities occur around sunset
 MIN_BEFORE = 90
 MIN_AFTER = 150
 # directory for system outputs
-EXPERIMENT_NAME = "texas_bats_v3"
 MODEL_VERSION = "v3"
+EXPERIMENT_NAME = f"texas_bats_{MODEL_VERSION}"
 DATA_ROOT = f"/mnt/nfs/scratch1/wenlongzhao/roosts_data/{EXPERIMENT_NAME}"
 
-
-ARGS = [(s, t[0], t[1]) for s in STATIONS for t in TIMES]
-for args in ARGS:
+try:
+    assert STATIONS_TIMES
+    args_list = STATIONS_TIMES
+except:
+    args_list = [(s, t[0], t[1]) for s in STATIONS for t in TIMES]
+for args in args_list:
     station = args[0]
     start = args[1]
     end = args[2]
@@ -42,7 +50,7 @@ for args in ARGS:
     --cpus-per-task={NUM_CPUS} \
     --mem-per-cpu=2000 \
     --partition=longq \
-    --time=2-00:00:00 \
+    --time=7-00:00:00 \
     demo.sbatch \
     --station {station} --start {start} --end {end} \
     --sun_activity {SUN_ACTIVITY} --min_before {MIN_BEFORE} --min_after {MIN_AFTER} \

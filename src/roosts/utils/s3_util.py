@@ -81,8 +81,11 @@ def parse_key(key):
 ####################################
 
 def get_station_day_scan_keys(
-        start_time, end_time, station,
-        stride_in_minutes=3, thresh_in_minutes=3,
+        start_time,
+        end_time,
+        station,
+        stride_in_minutes=3,
+        thresh_in_minutes=3,
         aws_access_key_id = None,
         aws_secret_access_key = None,
 ):
@@ -133,7 +136,8 @@ def get_station_day_scan_keys(
 
 
 def download_scan(
-        key, data_dir,
+        key,
+        data_dir,
         aws_access_key_id=None,
         aws_secret_access_key=None,
 ):

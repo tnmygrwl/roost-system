@@ -29,7 +29,8 @@ class Downloader:
 
             try:
                 download_scan(
-                    key, self.download_dir,
+                    key,
+                    self.download_dir,
                     aws_access_key_id=self.aws_access_key_id,
                     aws_secret_access_key=self.aws_secret_access_key,
                 )

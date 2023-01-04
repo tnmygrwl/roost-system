@@ -21,6 +21,7 @@ here = os.path.dirname(os.path.realpath(__file__))
 parser = argparse.ArgumentParser()
 parser.add_argument('--sun_activity', type=str, default="sunrise", help="time window around sunrise or sunset")
 parser.add_argument('--data_root', type=str, help="directory for all outputs", default=f"{here}/../roosts_data")
+parser.add_argument('--model_version', type=str, default="v2")
 args = parser.parse_args()
 print(args, flush=True)
 
@@ -38,6 +39,7 @@ DET_CFG = {
     "score_thresh":     0.05,
     "config_file":      "COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml",
     "use_gpu":          torch.cuda.is_available(),
+    "version":          args.model_version,
 }
 
 # tracker model config

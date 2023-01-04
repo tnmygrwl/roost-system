@@ -9,11 +9,11 @@ from roosts.detection.detector import Detector
 from roosts.tracking.tracker import Tracker
 from roosts.utils.visualizer import Visualizer
 from roosts.utils.postprocess import Postprocess
-import roosts.utils.file_util as fileUtil
-from roosts.utils.time_util import utc_to_local_time
+from roosts.utils.file_util import delete_files
+from roosts.utils.time_util import scan_key_to_local_time
 
 
-class RoostSystem():
+class RoostSystem:
 
     def __init__(self, args, det_cfg, pp_cfg, dirs):
         self.args = args
@@ -30,7 +30,13 @@ class RoostSystem():
             self.postprocess = Postprocess(**pp_cfg)
             self.visualizer = Visualizer(sun_activity=self.args.sun_activity)
 
-    def run_day_station(self, day, keys, process_start_time):
+    def run_day_station(
+            self,
+            day, # timestamps that indicate the beginning of dates, no time zone info
+            sun_activity_time, # utc timestamp for the next local sun activity after the beginning of the local date
+            keys, # aws keys which uses UTC time: yyyy/mm/dd/ssss/ssssyyyymmdd_hhmmss*
+            process_start_time
+    ):
         local_date_string = day.strftime('%Y%m%d')  # yyyymmdd
         local_date_station_prefix = os.path.join(
             day.strftime('%Y'),
@@ -55,28 +61,33 @@ class RoostSystem():
         keys = self.downloader.download_scans(keys, logger)
 
         ######################### (2) Render data #########################
-        """
-            npz_files: for detection module to load/preprocess data
-            img_files: for visualization
-            scan_names: for tracking module to know the full image set
-        """
-
-        npz_files, img_files, scan_names = self.renderer.render(keys, logger)
-        fileUtil.delete_files([os.path.join(self.dirs["scan_dir"], key) for key in keys])
+        (
+            npz_files,  # the list of arrays for the detector to load and process
+            scan_names, # the list of all scans for the tracker to know
+            img_files,  # the list of dz05 images for visualization
+        ) = self.renderer.render(keys, logger)
+        delete_files([os.path.join(self.dirs["scan_dir"], key) for key in keys])
 
         if len(npz_files) == 0:
             process_end_time = time.time()
-            logger.info(f'[Passed] no successfully rendered scan for {self.args.station} local time {local_date_string}; '
-                        f'total time elapse: {process_end_time - process_start_time}')
-            print(f"No successfully rendered scan.\nTotal time elapse: {process_end_time - process_start_time}\n", flush=True)
+            logger.info(
+                f'[Passed] no successfully rendered scan for {self.args.station} local time {local_date_string}; '
+                f'total time elapse: {process_end_time - process_start_time}'
+            )
+            print(
+                f"No successfully rendered scan.\nTotal time elapse: {process_end_time - process_start_time}\n",
+                flush=True
+            )
             return
 
         os.makedirs(self.dirs["scan_and_track_dir"], exist_ok=True)
         scans_path = os.path.join(
-            self.dirs["scan_and_track_dir"], f'scans_{self.args.station}_{self.args.start}_{self.args.end}.txt'
+            self.dirs["scan_and_track_dir"],
+            f'scans_{self.args.station}_{self.args.start}_{self.args.end}.txt'
         )
         tracks_path = os.path.join(
-            self.dirs["scan_and_track_dir"], f'tracks_{self.args.station}_{self.args.start}_{self.args.end}.txt'
+            self.dirs["scan_and_track_dir"],
+            f'tracks_{self.args.station}_{self.args.start}_{self.args.end}.txt'
         )
         if not os.path.exists(scans_path):
             with open(scans_path, "w") as f:
@@ -85,7 +96,7 @@ class RoostSystem():
             with open(tracks_path, 'w') as f:
                 f.write(f'track_id,filename,from_{self.args.sun_activity},det_score,x,y,r,lon,lat,radius,local_time\n')
         with open(scans_path, "a+") as f:
-            f.writelines([f"{scan_name},{utc_to_local_time(scan_name)}\n" for scan_name in scan_names])
+            f.writelines([f"{scan_name},{scan_key_to_local_time(scan_name)}\n" for scan_name in scan_names])
 
         if self.args.just_render:
             return
@@ -109,12 +120,11 @@ class RoostSystem():
             (2) clean up the false positives due to windfarm and rain using auxiliary information
         """
         cleaned_detections, tracks = self.postprocess.annotate_detections(
-            copy.deepcopy(tracked_detections), copy.deepcopy(tracks), npz_files
+            copy.deepcopy(tracked_detections), copy.deepcopy(tracks), npz_files, sun_activity_time
         )
         logger.info(f'[Postprocessing Done] {len(cleaned_detections)} cleaned detections')
 
         ######################### (6) Visualize the detection and tracking results #########################
-
         # generate gif visualization
         if self.args.gif_vis:
             """ visualize detections under multiple thresholds of detection score"""
@@ -129,10 +139,12 @@ class RoostSystem():
                 os.path.join(self.dirs["vis_NMS_MERGE_track_dir"], self.args.station, local_year, local_month)
             )
 
-        # generate a website file
-        self.visualizer.generate_web_files(cleaned_detections, tracks, tracks_path)
+        # save the list of tracks for UI
+        self.visualizer.save_predicted_tracks(cleaned_detections, tracks, tracks_path)
 
         process_end_time = time.time()
-        logger.info(f'[Finished] running the system for {self.args.station} local time {local_date_string}; '
-                    f'total time elapse: {process_end_time - process_start_time}')
+        logger.info(
+            f'[Finished] running the system for {self.args.station} local time {local_date_string}; '
+            f'total time elapse: {process_end_time - process_start_time}'
+        )
         print(f"Total time elapse: {process_end_time - process_start_time}\n", flush=True)

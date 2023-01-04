@@ -8,40 +8,46 @@ import matplotlib.colors as pltc
 from matplotlib import image
 from tqdm import tqdm
 
+
+# rendering settings
 ARRAY_Y_DIRECTION   = "xy" # default radar direction, y is first dim (row), large y is north, row 0 is south
 ARRAY_R_MAX         = 150000.0
 ARRAY_DIM           = 600
 ARRAY_ATTRIBUTES    = ["reflectivity", "velocity", "spectrum_width"]
 ARRAY_ELEVATIONS    = [0.5, 1.5, 2.5, 3.5, 4.5]
-ARRAY_RENDER_CONFIG = {"ydirection":          ARRAY_Y_DIRECTION,
-                       "fields":              ARRAY_ATTRIBUTES,
-                       "coords":              "cartesian",
-                       "r_min":               2125.0,       # default: first range bin of WSR-88D
-                       "r_max":               ARRAY_R_MAX,  # 459875.0 default: last range bin
-                       "r_res":               250,          # default: super-res gate spacing
-                       "az_res":              0.5,          # default: super-res azimuth resolution
-                       "dim":                 ARRAY_DIM,    # num pixels on a side in Cartesian rendering
-                       "sweeps":              None,
-                       "elevs":               ARRAY_ELEVATIONS,
-                       "use_ground_range":    True,
-                       "interp_method":       'nearest'}
+ARRAY_RENDER_CONFIG = {
+    "ydirection":       ARRAY_Y_DIRECTION,
+    "fields":           ARRAY_ATTRIBUTES,
+    "coords":           "cartesian",
+    "r_min":            2125.0,       # default: first range bin of WSR-88D
+    "r_max":            ARRAY_R_MAX,  # 459875.0 default: last range bin
+    "r_res":            250,          # default: super-res gate spacing
+    "az_res":           0.5,          # default: super-res azimuth resolution
+    "dim":              ARRAY_DIM,    # num pixels on a side in Cartesian rendering
+    "sweeps":           None,
+    "elevs":            ARRAY_ELEVATIONS,
+    "use_ground_range": True,
+    "interp_method":    'nearest'
+}
 DUALPOL_DIM             = 600
 DUALPOL_ATTRIBUTES      = ["differential_reflectivity", "cross_correlation_ratio", "differential_phase"]
 DUALPOL_ELEVATIONS      = [0.5, 1.5, 2.5, 3.5, 4.5]
-DUALPOL_RENDER_CONFIG   = {"ydirection":          ARRAY_Y_DIRECTION,
-                           "fields":              DUALPOL_ATTRIBUTES,
-                           "coords":              "cartesian",
-                           "r_min":               2125.0,       # default: first range bin of WSR-88D
-                           "r_max":               ARRAY_R_MAX,  # default 459875.0: last range bin
-                           "r_res":               250,          # default: super-res gate spacing
-                           "az_res":              0.5,          # default: super-res azimuth resolution
-                           "dim":                 DUALPOL_DIM,  # num pixels on a side in Cartesian rendering
-                           "sweeps":              None,
-                           "elevs":               DUALPOL_ELEVATIONS,
-                           "use_ground_range":    True,
-                           "interp_method":       "nearest"}
+DUALPOL_RENDER_CONFIG   = {
+    "ydirection":           ARRAY_Y_DIRECTION,
+    "fields":               DUALPOL_ATTRIBUTES,
+    "coords":               "cartesian",
+    "r_min":                2125.0,       # default: first range bin of WSR-88D
+    "r_max":                ARRAY_R_MAX,  # default 459875.0: last range bin
+    "r_res":                250,          # default: super-res gate spacing
+    "az_res":               0.5,          # default: super-res azimuth resolution
+    "dim":                  DUALPOL_DIM,  # num pixels on a side in Cartesian rendering
+    "sweeps":               None,
+    "elevs":                DUALPOL_ELEVATIONS,
+    "use_ground_range":     True,
+    "interp_method":        "nearest"
+}
 
-####### render as images #######
+
 # visualization settings
 COLOR_ARRAY = [
     '#006400', # for not scaled boxes
@@ -51,52 +57,46 @@ COLOR_ARRAY = [
     '#FFFF00'
 ]
 NORMALIZERS = {
-        'reflectivity':              pltc.Normalize(vmin=  -5, vmax= 35),
-        'velocity':                  pltc.Normalize(vmin= -15, vmax= 15),
-        'spectrum_width':            pltc.Normalize(vmin=   0, vmax= 10),
-        'differential_reflectivity': pltc.Normalize(vmin=  -4, vmax= 8),
-        'differential_phase':        pltc.Normalize(vmin=   0, vmax= 250),
-        'cross_correlation_ratio':   pltc.Normalize(vmin=   0, vmax= 1.1)
+    'reflectivity':                 pltc.Normalize(vmin=  -5, vmax= 35),
+    'velocity':                     pltc.Normalize(vmin= -15, vmax= 15),
+    'spectrum_width':               pltc.Normalize(vmin=   0, vmax= 10),
+    'differential_reflectivity':    pltc.Normalize(vmin=  -4, vmax= 8),
+    'differential_phase':           pltc.Normalize(vmin=   0, vmax= 250),
+    'cross_correlation_ratio':      pltc.Normalize(vmin=   0, vmax= 1.1)
 }
 
+
 class Renderer:
-
-    """ 
-        Extract radar products from raw radar scans, 
-        save the products in npz files, 
-        save the dualpol data for postprocessing,
-        render ref1 and rv1 for visualization     
-        delete the radar scans 
-
-        input: directories to save rendered arrays and images and rendering configs
-        output: npz_files: for detection module to load/preprocess data
-                img_files: for visualization
-                scan_names: for tracking module to know the full image set
-
-    """
-
-    def __init__(self, 
-                 download_dir, npz_dir, ui_img_dir,
-                 array_render_config=ARRAY_RENDER_CONFIG, 
-                 dualpol_render_config=DUALPOL_RENDER_CONFIG):
-
+    def __init__(
+            self,
+            download_dir,
+            npz_dir,
+            ui_img_dir,
+            array_render_config=ARRAY_RENDER_CONFIG,
+            dualpol_render_config=DUALPOL_RENDER_CONFIG,
+    ):
         self.download_dir = download_dir
         self.npz_dir = npz_dir
-        self.dz0_5_imgdir = os.path.join(ui_img_dir, 'dz05')
-        self.vr0_5_imgdir = os.path.join(ui_img_dir, 'vr05')
-        self.imgdirs = {("reflectivity", 0.5): self.dz0_5_imgdir, ("velocity", 0.5): self.vr0_5_imgdir}
+
+        self.dz05_imgdir = os.path.join(ui_img_dir, 'dz05')
+        self.vr05_imgdir = os.path.join(ui_img_dir, 'vr05')
+        self.imgdirs = {("reflectivity", 0.5): self.dz05_imgdir, ("velocity", 0.5): self.vr05_imgdir}
+
         self.array_render_config = array_render_config
         self.dualpol_render_config = dualpol_render_config
 
-
     def render(self, keys, logger, force_rendering=False):
+        """
+            Extract radar products from raw radar scans, save them to npz files,
+            render dz05 and vr05 as png for UI.
+            Radar scans are typically deleted after this.
+        """
 
-        npz_files = [] # for detection module to load/preprocess data
-        img_files = [] # for visualization
-        scan_names = [] # for tracking module to know the full image set
+        npz_files = [] # the list of arrays for the detector to load and process
+        scan_names = [] # the list of all scans for the tracker to know
+        img_files = [] # the list of dz05 images for visualization
 
         for key in tqdm(keys, desc="Rendering"):
-            
             key_splits = key.split("/")
             utc_year = key_splits[-5]
             utc_month = key_splits[-4]
@@ -106,19 +106,19 @@ class Renderer:
             scan = os.path.splitext(key_splits[-1])[0]
 
             npz_dir = os.path.join(self.npz_dir, utc_date_station_prefix)
-            dz0_5_imgdir = os.path.join(self.dz0_5_imgdir, utc_date_station_prefix)
-            vr0_5_imgdir = os.path.join(self.vr0_5_imgdir, utc_date_station_prefix)
+            dz05_imgdir = os.path.join(self.dz05_imgdir, utc_date_station_prefix)
+            vr05_imgdir = os.path.join(self.vr05_imgdir, utc_date_station_prefix)
             os.makedirs(npz_dir, exist_ok=True)
-            os.makedirs(dz0_5_imgdir, exist_ok=True)
-            os.makedirs(vr0_5_imgdir, exist_ok=True)
+            os.makedirs(dz05_imgdir, exist_ok=True)
+            os.makedirs(vr05_imgdir, exist_ok=True)
 
             npz_path = os.path.join(npz_dir, f"{scan}.npz")
-            ref1_path = os.path.join(dz0_5_imgdir, f"{scan}.png")
+            dz05_path = os.path.join(dz05_imgdir, f"{scan}.png")
 
-            if os.path.exists(npz_path) and os.path.exists(ref1_path) and not force_rendering:
+            if os.path.exists(npz_path) and os.path.exists(dz05_path) and not force_rendering:
                 npz_files.append(npz_path)
-                img_files.append(ref1_path)
                 scan_names.append(scan)
+                img_files.append(dz05_path)
                 continue
 
             arrays = {}
@@ -145,13 +145,12 @@ class Renderer:
 
             if "array" in arrays:
                 np.savez_compressed(npz_path, **arrays)
-                self.render_img(arrays["array"], utc_date_station_prefix, scan) # render ref1 and rv1 images for ui
+                self.render_img(arrays["array"], utc_date_station_prefix, scan) # render dz05 and vr05 as png for UI
                 npz_files.append(npz_path)
-                img_files.append(ref1_path)
                 scan_names.append(scan)
+                img_files.append(dz05_path)
 
-        return npz_files, img_files, scan_names
-
+        return npz_files, scan_names, img_files
 
     def render_img(self, array, utc_date_station_prefix, scan):
         attributes = self.array_render_config['fields']
@@ -163,5 +162,3 @@ class Renderer:
                 # flip the y axis, from geographical (big y means North) to image (big y means lower)
                 # omit the fourth alpha dimension, NAN are black but not white
             image.imsave(os.path.join(self.imgdirs[(attr, elev)], utc_date_station_prefix, f"{scan}.png"), rgb)
-
-

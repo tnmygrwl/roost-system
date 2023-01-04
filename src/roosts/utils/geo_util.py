@@ -1,7 +1,6 @@
 import geopy
 from geopy import distance
 import numpy as np
-from roosts.utils.sun_activity_util import get_sun_activity_time
 from roosts.utils.nexrad_util import NEXRAD_LOCATIONS
 from datetime import datetime
 
@@ -16,18 +15,6 @@ def is_box_nested(box1, box2):
 
 def geo_dist_km(coor1, coor2):
     return distance.distance(coor1, coor2).km
-
-def sun_activity_time(scan, sun_activity):
-    """
-    :param sun_activity: str, sunrise or sunset
-    """
-    station = scan[:4]
-    year = int(scan[4:8])
-    month = int(scan[8:10])
-    day = int(scan[10:12])
-    formatted_date = datetime(year, month, day, 12, 0)
-    sun_activity_time = get_sun_activity_time(station, formatted_date, sun_activity=sun_activity)
-    return sun_activity_time.minute + sun_activity_time.hour * 60.
 
 def cart2pol(x, y):
     dis = np.sqrt(x**2 + y**2)
