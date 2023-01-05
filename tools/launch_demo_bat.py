@@ -6,9 +6,9 @@ NUM_CPUS = 7
 # specify either
 STATIONS = ["KSJT", "KGRK", "KDFX", "KEWX"]
 TIMES = []
-for year in range(2000, 2007): # (2007, 2014) (2014, 2021)
+for year in range(2007, 2014): # (2007, 2014) (2014, 2021)
     for (start_date, end_date) in [("0101", "0331"), ("0401", "0630"), ("0701", "0930"), ("1001", "1231")]:
-        TIMES.append((year+start_date, year+end_date))
+        TIMES.append((str(year)+start_date, str(year)+end_date))
 # or
 # STATION_TIMES = [
 #     ("KLTX", "20100701", "20100701"),

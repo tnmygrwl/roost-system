@@ -50,9 +50,9 @@ def get_sun_activity_time(station, input_daytime, sun_activity, silent=True):
 
     sun = ephem.Sun()
     if sun_activity == "sunrise":
-        return obs.next_rising(sun).datetime()
+        return obs.next_rising(sun).datetime().replace(tzinfo=pytz.utc)
     else:
-        return obs.next_setting(sun).datetime()
+        return obs.next_setting(sun).datetime().replace(tzinfo=pytz.utc)
 
 
 def scan_key_to_utc_time(scan):
