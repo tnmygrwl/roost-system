@@ -2,15 +2,15 @@ import os
 import time
 
 NUM_CPUS = 7
-# station, start date (inclusive), end date (inclusive)
+# deployment station, start date (inclusive), end date (inclusive)
 # specify either
 STATIONS = ["KSJT", "KGRK", "KDFX", "KEWX"]
 TIMES = []
-for year in range(2007, 2014): # (2007, 2014) (2014, 2021)
+for year in range(2000, 2007): # (2007, 2014) (2014, 2021)
     for (start_date, end_date) in [("0101", "0331"), ("0401", "0630"), ("0701", "0930"), ("1001", "1231")]:
         TIMES.append((str(year)+start_date, str(year)+end_date))
 # or
-# STATION_TIMES = [
+# STATIONS_TIMES = [
 #     ("KLTX", "20100701", "20100701"),
 # ]
 
@@ -50,7 +50,7 @@ for args in args_list:
     --cpus-per-task={NUM_CPUS} \
     --mem-per-cpu=2000 \
     --partition=longq \
-    --time=7-00:00:00 \
+    --time=4-00:00:00 \
     demo.sbatch \
     --station {station} --start {start} --end {end} \
     --sun_activity {SUN_ACTIVITY} --min_before {MIN_BEFORE} --min_after {MIN_AFTER} \

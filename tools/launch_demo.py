@@ -2,8 +2,7 @@ import os
 import time
 
 NUM_CPUS = 7
-# station, start date (inclusive), end date (inclusive)
-# deployment
+# deployment station, start date (inclusive), end date (inclusive)
 # specify either
 STATIONS = ["KBUF", "KCLE", "KTYX"]
 TIMES = [("20100201", "20100331"), ("20100801", "20100930"),
