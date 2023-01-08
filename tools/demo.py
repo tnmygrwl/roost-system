@@ -82,8 +82,11 @@ for day_idx, day in enumerate(days):
     date_string = day.strftime('%Y%m%d')  # yyyymmdd
     print(f"-------------------- Day {day_idx+1}: {date_string} --------------------\n", flush=True)
 
-    sun_activity_time = get_sun_activity_time(args.station, day, args.sun_activity)
-            # utc timestamp for next local sun activity after the beginning of the local date
+    sun_activity_time = get_sun_activity_time(
+        args.station,
+        day, # must not have tzinfo
+        args.sun_activity
+    )  # utc timestamp (with utc tzinfo) for the local sun activity after the beginning of the local date
     start_time = sun_activity_time - timedelta(minutes=args.min_before)
     end_time = sun_activity_time + timedelta(minutes=args.min_after)
     keys = get_station_day_scan_keys(

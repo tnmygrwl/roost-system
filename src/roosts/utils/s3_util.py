@@ -74,8 +74,7 @@ def parse_key(key):
     vals = re.match('(\w{4})(\d{4}\d{2}\d{2}_\d{2}\d{2}\d{2})(\.?\w+)', key)
     (station, timestamp, suffix) = vals.groups()
     t = datetime.strptime(timestamp, '%Y%m%d_%H%M%S')
-    t = t.replace(tzinfo=pytz.utc) # scan keys use UTC times
-    return t, station
+    return pytz.utc.localize(t), station
 
 
 ####################################

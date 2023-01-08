@@ -16,11 +16,16 @@ def get_days_list(start_date_str, end_date_str):
     current_date = start_date
     while current_date < end_date:
         days.append(current_date)
-        current_date += timedelta(days=1)
+        current_date += timedelta(days=1) # no tzinfo, same wall clock time, may not be 24h
     return days
 
 
-def get_sun_activity_time(station, input_daytime, sun_activity, silent=True):
+def get_sun_activity_time(
+        station,
+        input_daytime, # must not have tzinfo
+        sun_activity,
+        silent=True
+):
     # Here's an alternative method which I don't fully understand for getting sun activity times
     # https://github.com/darkecology/cajundata/blob/master/scripts/util.py#L483
 
@@ -35,10 +40,8 @@ def get_sun_activity_time(station, input_daytime, sun_activity, silent=True):
     obs.lon = str(sinfo['lon'])
     obs.elev = sinfo['elev']
 
-    # convert the beginning of the local date to utc time
-    tz = pytz.timezone(sinfo['tz'])
-    localized_daytime = tz.localize(input_daytime) # add time zone info
-    obs.date = localized_daytime.astimezone(pytz.utc) # convert to utc
+    # add tzinfo and convert to utc time
+    obs.date = pytz.timezone(sinfo['tz']).localize(input_daytime).astimezone(pytz.utc)
 
     if not silent:
         print(obs.lat, obs.lon, obs.elev)
@@ -50,24 +53,22 @@ def get_sun_activity_time(station, input_daytime, sun_activity, silent=True):
 
     sun = ephem.Sun()
     if sun_activity == "sunrise":
-        return obs.next_rising(sun).datetime().replace(tzinfo=pytz.utc)
+        return pytz.utc.localize(obs.next_rising(sun).datetime())
     else:
-        return obs.next_setting(sun).datetime().replace(tzinfo=pytz.utc)
+        return pytz.utc.localize(obs.next_setting(sun).datetime())
 
 
 def scan_key_to_utc_time(scan):
-    return datetime(
+    return pytz.utc.localize(datetime(
         int(scan[4:8]), # year
         int(scan[8:10]), # month
         int(scan[10:12]), # date
         int(scan[13:15]), # hour
         int(scan[15:17]), # min
         int(scan[17:19]), # sec
-        tzinfo=pytz.utc
-    )
+    ))
 
 def scan_key_to_local_time(scan):
     utc_time = scan_key_to_utc_time(scan)
-    tz = pytz.timezone(NEXRAD_LOCATIONS[scan[:4]]['tz'])
-    local_time = utc_time.astimezone(tz)
+    local_time = utc_time.astimezone(pytz.timezone(NEXRAD_LOCATIONS[scan[:4]]['tz']))
     return local_time.strftime('%Y%m%d_%H%M%S')

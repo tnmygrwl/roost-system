@@ -2,7 +2,6 @@ import geopy
 from geopy import distance
 import numpy as np
 from roosts.utils.nexrad_util import NEXRAD_LOCATIONS
-from datetime import datetime
 
 def euclid_distance(p, q):
     return np.sqrt(np.sum((p - q) * (p - q), axis = 1))
