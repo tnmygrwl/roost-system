@@ -1,7 +1,5 @@
 # Manual Additions
 tools/deployment_requests
-tools/gen_deploy_station_days_scripts.py
-tools/launch_demo*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
