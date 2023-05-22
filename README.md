@@ -1,5 +1,5 @@
-# Detecting and Tracking Communal Bird Roosts in Weather Radar Data
-This repo implements a machine learning system for detecting and tracking communal bird roosts 
+# Detecting and Tracking Roosts in Weather Radar Data
+This repo implements a machine learning system for detecting and tracking roosts 
 in weather surveillance radar data.
 Roost detection is based on [Detectron2](https://github.com/darkecology/detectron2) using PyTorch.
 
