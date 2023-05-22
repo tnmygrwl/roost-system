@@ -88,7 +88,7 @@ Review the updated AWS config.
 3. Modify **demo.py** for system customization. 
 For example, DET_CFG can be changed to adopt a new detector.
 
-4. Then consider two deployment scenarios.
+4. Make sure the environment is activated. Then consider two deployment scenarios.
    1. In the first, we process consecutive days at stations, i.e. we launch one job for 
    each set of continuous days at a station. Modify VARIABLES in **tools/launch_demo.py**.
    Then under **tools**, run `python launch_demo.py` 
