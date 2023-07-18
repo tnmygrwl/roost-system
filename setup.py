@@ -7,7 +7,7 @@ install_requires = [
     ### data ###
     "awscli",
     "azure-storage-blob==12.16.0",
-    "h5py==3.9.0",             # time zone, 2021.1
+    "h5py==3.9.0",
     "pytz==2021.1",             # time zone, 2021.1
     "ephem==3.7.7.1",           # 3.7.7.1
     "geopy==2.1.0",             # 2.1.0
