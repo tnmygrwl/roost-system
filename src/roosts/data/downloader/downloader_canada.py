@@ -11,6 +11,13 @@ class DownloaderCanada(Downloader):
         tracking roosts.
     """
 
+    """
+        Canada station name to a four character name mapping to keep it inline with the American naming convention.
+        This is done to minimize the set of changes made to the roost-system repo which expects naming in a certain format.
+    """
+    canada_station_map = {
+        'CASET' : 'CSET',
+    }
     def __init__(self, download_dir, npz_dir):
         self.download_dir = download_dir
         os.makedirs(self.download_dir, exist_ok=True)
@@ -25,14 +32,13 @@ class DownloaderCanada(Downloader):
         utc_year = key[:4]
         utc_month = key[4:6]
         utc_date = key[6:8]
-        utc_station = "CSET" # Hardcoded value
+        utc_station = self.canada_station_map[key[32:37]]
         utc_hour = key[8:10]
         utc_min = key[11:13]
         utc_sec = '00' # Hardcoded as seconds information not present for Canadian data
         filename = f"{utc_station}{utc_year}{utc_month}{utc_date}_{utc_hour}{utc_min}{utc_sec}"
         return f"{utc_year}/{utc_month}/{utc_date}/{utc_station}/{filename}"
         
-
     def download_scans(self, keys, logger):
         """ Download radar scans from Azure """
 
