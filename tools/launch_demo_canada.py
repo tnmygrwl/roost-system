@@ -4,24 +4,20 @@ import time
 NUM_CPUS = 7
 # deployment station, start date (inclusive), end date (inclusive)
 # specify either
-STATIONS = ["KEWX"] # ["KDFX", "KSJT", "KGRK"]
-TIMES = []
-for year in range(2000, 2021):
-    # for (start_date, end_date) in [("0101", "0331"), ("0401", "0630"), ("0701", "0930"), ("1001", "1231")]:
-    for (start_date, end_date) in [("0101", "1231")]:
-        TIMES.append((str(year)+start_date, str(year)+end_date))
+STATIONS = ["CSET"]
+TIMES = [("20220603", "20220604"),]
 # or
 # STATIONS_TIMES = [
-#     ("KDFX", "20060101", "20061231"),
+#     ("KLTX", "20100701", "20100701"),
 # ]
 
-SUN_ACTIVITY = "sunset" # bat activities occur around sunset
-MIN_BEFORE = 150
-MIN_AFTER = 150
+SUN_ACTIVITY = "sunrise" # bird activities occur around sunrise
+MIN_BEFORE = 30
+MIN_AFTER = 60
 # directory for system outputs
 MODEL_VERSION = "v3"
-EXPERIMENT_NAME = f"texas_bats_{MODEL_VERSION}_long"
-DATA_ROOT = f"/mnt/nfs/scratch1/wenlongzhao/roosts_data/{EXPERIMENT_NAME}"
+EXPERIMENT_NAME = f"canadian_test_{MODEL_VERSION}"
+DATA_ROOT = f"~/cdsfork/roost-data/{EXPERIMENT_NAME}"
 
 try:
     assert STATIONS_TIMES
@@ -32,7 +28,7 @@ for args in args_list:
     station = args[0]
     start = args[1]
     end = args[2]
-    
+    is_canadian = True
     slurm_logs = f"slurm_logs/{EXPERIMENT_NAME}/{station}"
     slurm_output = os.path.join(slurm_logs, f"{station}_{start}_{end}.out")
     slurm_error = os.path.join(slurm_logs, f"{station}_{start}_{end}.err")
@@ -50,10 +46,10 @@ for args in args_list:
     --ntasks=1 \
     --cpus-per-task={NUM_CPUS} \
     --mem-per-cpu=2000 \
-    --partition=longq \
-    --time=7-00:00:00 \
-    demo.sbatch \
-    --station {station} --start {start} --end {end} \
+    --partition=cpu-long \
+    --time=4-00:00:00 \
+    demo_canada.sbatch \
+    --station {station} --start {start} --end {end} --is_canadian={is_canadian}\
     --sun_activity {SUN_ACTIVITY} --min_before {MIN_BEFORE} --min_after {MIN_AFTER} \
     --data_root {DATA_ROOT} --model_version {MODEL_VERSION}'''
     
