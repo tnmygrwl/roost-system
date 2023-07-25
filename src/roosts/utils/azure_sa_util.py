@@ -65,14 +65,13 @@ def get_station_day_scan_keys(
         end_time,
         station, # not being used right now
         stride_in_minutes=6,
-        thresh_in_minutes=6
+        thresh_in_minutes=6,
+        sa_connection_str=None
 ):
 
-
-    container_client = ContainerClient(
-            account_url="https://roostcanada.blob.core.windows.net",
-            container_name="caset-2022",
-            credential=None)
+    container_client = ContainerClient.from_connection_string(
+            conn_str=sa_connection_str,
+            container_name="caset-2022")
    
     blob_names = []
     current_time = start_time
@@ -111,12 +110,12 @@ def get_station_day_scan_keys(
 def download_scan(
         key,
         data_dir,
-        file_download_loc):
+        file_download_loc,
+        sa_connection_str=None):
 
-    container_client = ContainerClient(
-            account_url="https://roostcanada.blob.core.windows.net",
-            container_name="caset-2022",
-            credential=None)
+    container_client = ContainerClient.from_connection_string(
+            conn_str=sa_connection_str,
+            container_name="caset-2022")
     
     local_file = os.path.join(data_dir, file_download_loc)
     local_dir, filename = os.path.split(local_file)

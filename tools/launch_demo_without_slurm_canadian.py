@@ -22,6 +22,7 @@ def run_system():
   args.just_render = False
   args.gif_vis = True
   args.is_canadian = True
+  args.sa_connection_str = sa_connection_str
 
   # detection model config
   DET_CFG = {
@@ -72,7 +73,7 @@ def run_system():
       sun_activity_time = get_sun_activity_time(args.station, day, sun_activity=args.sun_activity) # utc
       start_time = sun_activity_time - timedelta(minutes=args.min_before)
       end_time = sun_activity_time + timedelta(minutes=args.min_after)
-      keys = get_station_day_scan_keys(start_time, end_time, args.station)
+      keys = get_station_day_scan_keys(start_time, end_time, args.station, sa_connection_str=args.sa_connection_str)
       keys = sorted(list(set(keys)))  # azure keys
 
       roost_system.run_day_station(day, sun_activity_time, keys, process_start_time)
@@ -84,4 +85,7 @@ end = "20220602" # the last day to process
 sun_activity = "sunrise" # process scans in a time window around "sunrise" or "sunset"
 min_before = 30 # process scans this many minutes before the sun activity
 min_after = 60 # process scans this many minutes after the sun activity
+
+# Add connection string for the storage account "roostcanada" from the portal here
+sa_connection_str = None
 run_system()

@@ -24,6 +24,7 @@ parser.add_argument('--just_render', action='store_true', help="just download an
 parser.add_argument('--model_version', type=str, default="v2")
 parser.add_argument('--gif_vis', action='store_true', help="generate gif visualization")
 parser.add_argument('--is_canadian', type=bool, default=False, help='to determine data type')
+parser.add_argument('--sa_connection_str', type=str, default=None)
 args = parser.parse_args()
 assert args.sun_activity in ["sunrise", "sunset"]
 print(args, flush=True)
@@ -88,7 +89,7 @@ for day_idx, day in enumerate(days):
     )  # utc timestamp (with utc tzinfo) for the local sun activity after the beginning of the local date
     start_time = sun_activity_time - timedelta(minutes=args.min_before)
     end_time = sun_activity_time + timedelta(minutes=args.min_after)
-    keys = get_station_day_scan_keys(start_time, end_time, args.station)
+    keys = get_station_day_scan_keys(start_time, end_time, args.station, sa_connection_str=args.sa_connection_str)
     keys = sorted(list(set(keys)))
 
     roost_system.run_day_station(day, sun_activity_time, keys, process_start_time)

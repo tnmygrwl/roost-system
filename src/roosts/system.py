@@ -29,7 +29,8 @@ class RoostSystem:
             self.is_canadian_data = True
             self.downloader = DownloaderCanada(
                 download_dir=dirs["scan_dir"],
-                npz_dir=dirs["npz_dir"]
+                npz_dir=dirs["npz_dir"],
+                sa_connection_str=args.sa_connection_str
             )
 
         self.renderer = Renderer(dirs["scan_dir"], dirs["npz_dir"], dirs["ui_img_dir"],
