@@ -42,7 +42,7 @@ class Tracker:
 
         tracks = []
         if scans is None:
-            scans = list(set([det["scanname"] for det in detections]))
+            scans = list({det["scanname"] for det in detections})
 
         """ (0) get ready """
         # sort the scans based on scan time
@@ -54,7 +54,7 @@ class Tracker:
 
         count_track = 1
         for scan_idx, scan in enumerate(tqdm(scans[:-1], desc="Tracking")): # ignore the last frame
-            
+
             """ (1) start from the first frame, if the detections is not tracked yet, init a track """
             for det_idx, det in enumerate(detections):
                 if det['scanname'] == scan and det['track_ID'] == -1:
@@ -130,7 +130,7 @@ class Tracker:
 
         detections, tracks = self.NMS_tracks(detections, tracks)
         detections, tracks = self.merge_tracks(detections, tracks)
-        
+
         return detections, tracks
 
 
@@ -150,7 +150,7 @@ class Tracker:
         x, y, r = track_state[:3]
         center_dist = []
         r_change = []
-        for idx, next_det in enumerate(next_dets):
+        for next_det in next_dets:
             xx, yy, rr = next_det['im_bbox']
             if next_det['track_ID'] == -1:
                 center_dist.append(np.sqrt((xx-x) ** 2 + (yy-y) ** 2))
@@ -253,9 +253,7 @@ class Tracker:
         """
         # (1) sort the tracks
         tracks.sort(key= lambda x: sum(x["det_or_pred"]), reverse=True)
-        det_dict = {}
-        for det in detections:
-            det_dict[det["det_ID"]] = det
+        det_dict = {det["det_ID"]: det for det in detections}
         # init
         for track in tracks:
             track["NMS_suppressed"] = False
@@ -279,7 +277,7 @@ class Tracker:
                                 overlap_dets += 1
                 if cooccur_num != 0 and (overlap_dets / cooccur_num >= 0.5):
                     track_j["NMS_suppressed"] = True
-        
+
         for track in tracks:
             for det_ID in track["det_IDs"]:
                 det_dict[det_ID]["track_NMS"] = track["NMS_suppressed"]
@@ -305,19 +303,14 @@ class Tracker:
         # (1) sort the tracks and radar scan names
         tracks = [t for t in tracks if not t["NMS_suppressed"]]
         tracks.sort(key=lambda x: sum(x["det_or_pred"]), reverse=True)
-        det_dict = {}
-        for det in detections:
-            det_dict[det["det_ID"]] = det
+        det_dict = {det["det_ID"]: det for det in detections}
         # init
         for track in tracks:
             track["merged"] = False
         # sort the scans based on scan time
-        scans = list(set([det["scanname"] for det in detections]))
+        scans = list({det["scanname"] for det in detections})
         scans.sort(key=lambda x: int(x[4:12] + x[13:19]))  # the first 4 characters are radar station name
-        scan_dict = {}
-        for scan_idx, scan in enumerate(scans):
-            scan_dict[scan] = scan_idx
-
+        scan_dict = {scan: scan_idx for scan_idx, scan in enumerate(scans)}
         # (2) start from the first tracks, measure its overlap with other tracks
         # get the last det from track1 and the first det from track2, measure the overlap,
         # if higher than a thresh, merge
@@ -326,9 +319,8 @@ class Tracker:
 
             if track_i["merged"]:
                 continue
-            else:
-                track_i["merged"] = True
-                new_track = copy.deepcopy(track_i)
+            track_i["merged"] = True
+            new_track = copy.deepcopy(track_i)
 
             # get the last det
             for k in range(len(track_i["det_or_pred"]) - 1, -1, -1):
@@ -344,8 +336,8 @@ class Tracker:
                 first_det_j = det_dict[track_j["det_IDs"][0]]
                 # the tracks to be merged is not overlapped
                 frame_gap = scan_dict[first_det_j["scanname"]] - scan_dict[last_det_i["scanname"]]
-                if (frame_gap > 0) and (frame_gap < 3):
-                    if self._is_det_overlapped(first_det_j["im_bbox"], last_det_i["im_bbox"]):
+                if self._is_det_overlapped(first_det_j["im_bbox"], last_det_i["im_bbox"]):
+                    if (frame_gap > 0) and (frame_gap < 3):
                         track_j["merged"] = True
                         merge_range = last_det_idx + frame_gap
                         new_track["det_IDs"] = new_track["det_IDs"][:merge_range] + track_j["det_IDs"]

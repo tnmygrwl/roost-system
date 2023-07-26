@@ -41,7 +41,7 @@ for seed in SEED:
                                f"{'_flip' if flip else ''}{'_rot' if rotate else ''}" \
                                f"{'_flt' if filter_empty else ''}" \
                                f"_lr{lr:.3f}_it{MAX_ITER//1000}k"
-                    script_path = os.path.join(script_dir, exp_name+'.sbatch')
+                    script_path = os.path.join(script_dir, f'{exp_name}.sbatch')
                     output_dir = os.path.join(log_dir, exp_name)
                     os.makedirs(output_dir, exist_ok=True)
 
@@ -49,19 +49,19 @@ for seed in SEED:
                         f.write('#!/bin/bash\n')
                         f.write('hostname\n')
                         f.write(
-                            ''.join((
-                                f'python train_roost_detector.py',
-                                f' --train_dataset {train_dataset}'
-                                f' --imsize {imsize}',
-                                f' --flip' if flip else '',
-                                f' --rotate' if rotate else '',
-                                f' --filter_empty' if filter_empty else '',
-                                f' --seed {seed}',
-                                f' --network {network} --pretrain {pretrain}'
-                                f' --anchor_strategy {anchor_strategy} --reg_loss {reg_loss}',
-                                f' --lr {lr} --max_iter {MAX_ITER}',
-                                f' --checkpoint_period {CKPT_PERIOD} --output_dir {output_dir}',
-                            ))
+                            ''.join(
+                                (
+                                    'python train_roost_detector.py',
+                                    f' --train_dataset {train_dataset} --imsize {imsize}',
+                                    ' --flip' if flip else '',
+                                    ' --rotate' if rotate else '',
+                                    ' --filter_empty' if filter_empty else '',
+                                    f' --seed {seed}',
+                                    f' --network {network} --pretrain {pretrain} --anchor_strategy {anchor_strategy} --reg_loss {reg_loss}',
+                                    f' --lr {lr} --max_iter {MAX_ITER}',
+                                    f' --checkpoint_period {CKPT_PERIOD} --output_dir {output_dir}',
+                                )
+                            )
                         )
                     partition = "gypsum-1080ti-phd" if exp_idx < 40 else "gypsum-titanx-phd" # TODO
                     launch_file.write(

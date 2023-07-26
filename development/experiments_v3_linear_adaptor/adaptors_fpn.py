@@ -101,7 +101,7 @@ class Adaptor_FPN(Backbone):
         """
         super(Adaptor_FPN, self).__init__()
         assert isinstance(bottom_up, Backbone)
-        
+
         # Feature map strides and channels from the bottom up network (e.g. ResNet)
         input_shapes = bottom_up.output_shape()
         in_strides = [input_shapes[f].stride for f in in_features]
@@ -131,12 +131,12 @@ class Adaptor_FPN(Backbone):
             weight_init.c2_xavier_fill(lateral_conv)
             weight_init.c2_xavier_fill(output_conv)
             stage = int(math.log2(in_strides[idx]))
-            self.add_module("fpn_lateral{}".format(stage), lateral_conv)
-            self.add_module("fpn_output{}".format(stage), output_conv)
+            self.add_module(f"fpn_lateral{stage}", lateral_conv)
+            self.add_module(f"fpn_output{stage}", output_conv)
 
             lateral_convs.append(lateral_conv)
             output_convs.append(output_conv)
-        
+
         # GPS: adaptor
         self.is_adaptor = adaptor
         if adaptor == 'linear':
@@ -144,7 +144,7 @@ class Adaptor_FPN(Backbone):
         elif adaptor == 'multi-layer':
             self.adaptor = MultiLayerAdaptor(input_channels=adaptor_in_channels)
         elif adaptor:
-            sys.exit('invalid adaptor <%s>!'%(adaptor))
+            sys.exit(f'invalid adaptor <{adaptor}>!')
 
         # Place convs into top-down order (from low to high resolution)
         # to make the top-down computation in forward clearer.
@@ -154,11 +154,11 @@ class Adaptor_FPN(Backbone):
         self.in_features = in_features
         self.bottom_up = bottom_up
         # Return feature names are "p<stage>", like ["p2", "p3", ..., "p6"]
-        self._out_feature_strides = {"p{}".format(int(math.log2(s))): s for s in in_strides}
+        self._out_feature_strides = {f"p{int(math.log2(s))}": s for s in in_strides}
         # top block output feature maps.
         if self.top_block is not None:
             for s in range(stage, stage + self.top_block.num_levels):
-                self._out_feature_strides["p{}".format(s + 1)] = 2 ** (s + 1)
+                self._out_feature_strides[f"p{s + 1}"] = 2 ** (s + 1)
 
         self._out_features = list(self._out_feature_strides.keys())
         self._out_feature_channels = {k: out_channels for k in self._out_features}
@@ -188,9 +188,8 @@ class Adaptor_FPN(Backbone):
         # Reverse feature maps into top-down order (from low to high resolution)
         bottom_up_features = self.bottom_up(x)
         x = [bottom_up_features[f] for f in self.in_features[::-1]]
-        results = []
         prev_features = self.lateral_convs[0](x[0])
-        results.append(self.output_convs[0](prev_features))
+        results = [self.output_convs[0](prev_features)]
         for features, lateral_conv, output_conv in zip(
             x[1:], self.lateral_convs[1:], self.output_convs[1:]
         ):
@@ -223,9 +222,9 @@ def _assert_strides_are_log2_contiguous(strides):
     Assert that each stride is 2x times its preceding stride, i.e. "contiguous in log2".
     """
     for i, stride in enumerate(strides[1:], 1):
-        assert stride == 2 * strides[i - 1], "Strides {} {} are not log2 contiguous".format(
-            stride, strides[i - 1]
-        )
+        assert (
+            stride == 2 * strides[i - 1]
+        ), f"Strides {stride} {strides[i - 1]} are not log2 contiguous"
 
 
 class LastLevelMaxPool(nn.Module):
@@ -278,7 +277,7 @@ def build_adaptor_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
     bottom_up = build_resnet_backbone(cfg, input_shape)
     in_features = cfg.MODEL.FPN.IN_FEATURES
     out_channels = cfg.MODEL.FPN.OUT_CHANNELS
-    backbone = Adaptor_FPN(
+    return Adaptor_FPN(
         bottom_up=bottom_up,
         in_features=in_features,
         out_channels=out_channels,
@@ -288,7 +287,6 @@ def build_adaptor_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
         adaptor=cfg.ADAPTOR_TYPE,
         adaptor_in_channels=cfg.ADAPTOR_IN_CHANNELS,
     )
-    return backbone
 
 
 @BACKBONE_REGISTRY.register()
@@ -306,7 +304,7 @@ def build_adaptor_retinanet_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
     in_features = cfg.MODEL.FPN.IN_FEATURES
     out_channels = cfg.MODEL.FPN.OUT_CHANNELS
     in_channels_p6p7 = bottom_up.output_shape()["res5"].channels
-    backbone = Adaptor_FPN(
+    return Adaptor_FPN(
         bottom_up=bottom_up,
         in_features=in_features,
         out_channels=out_channels,
@@ -316,7 +314,6 @@ def build_adaptor_retinanet_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
         adaptor=cfg.ADAPTOR_TYPE,
         adaptor_in_channels=cfg.ADAPTOR_IN_CHANNELS,
     )
-    return backbone
 
 
 ####################################################
@@ -381,9 +378,7 @@ class CustomResizeTransform(Transform):
             img, (self.new_h, self.new_w), mode=mode, align_corners=align_corners
         )
         shape[:2] = (self.new_h, self.new_w)
-        ret = img.permute(2, 3, 0, 1).view(shape).numpy()  # nchw -> hw(c)
-
-        return ret
+        return img.permute(2, 3, 0, 1).view(shape).numpy()
 
     def apply_coords(self, coords):
         coords[:, 0] = coords[:, 0] * (self.new_w * 1.0 / self.w)

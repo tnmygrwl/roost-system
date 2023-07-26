@@ -228,7 +228,7 @@ if args.adaptor != 'None':
     cfg.ADAPTOR_IN_CHANNELS = len(CHANNELS) * 3
     cfg.MODEL.PIXEL_MEAN = []
     cfg.MODEL.PIXEL_STD = []
-    for i in range(cfg.ADAPTOR_IN_CHANNELS):
+    for _ in range(cfg.ADAPTOR_IN_CHANNELS):
         cfg.MODEL.PIXEL_MEAN.append(127.5)
         cfg.MODEL.PIXEL_STD.append(1.0)
     # cfg.MODEL.BACKBONE.FREEZE_AT = 0 # GPS: to unfreeze all layers (default=2)

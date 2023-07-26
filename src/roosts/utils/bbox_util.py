@@ -16,7 +16,6 @@ def calculate_box_overlap(box, boxes):
     uni = ((box[2] - box[0] + 1.) * (box[3] - box[1] + 1.) +
           (boxes[:, 2] - boxes[:, 0] + 1.) * 
           (boxes[:, 3] - boxes[:, 1] + 1.) - inters)
-    
-    overlaps = inters / uni
-    return overlaps
+
+    return inters / uni
 

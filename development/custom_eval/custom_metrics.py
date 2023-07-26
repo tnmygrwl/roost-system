@@ -112,9 +112,9 @@ for (exp_name, test_dataset) in EVAL_SETTINGS:
             else:
                 output += "\t"
 
-with open(f"collected_results.txt", "w") as f:
+with open("collected_results.txt", "w") as f:
     f.writelines(outputs)
-with open(f"collected_exp_names.txt", "w") as f:
+with open("collected_exp_names.txt", "w") as f:
     f.writelines(exp_names)
 
 

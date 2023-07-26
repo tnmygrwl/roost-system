@@ -81,6 +81,18 @@ ARRAY_DIR = "/mnt/nfs/datasets/RadarNPZ"
 
 if args.input_channels == 1:
     CHANNELS = [("reflectivity", 0.5)]
+elif args.input_channels == 12:
+    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
+                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5),
+                ("reflectivity", 2.5), ("velocity", 2.5), ("spectrum_width", 2.5),
+                ("reflectivity", 3.5), ("velocity", 3.5), ("spectrum_width", 3.5)]
+elif args.input_channels == 15:
+    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
+                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5),
+                ("reflectivity", 2.5), ("reflectivity", 3.5), ("velocity", 2.5),
+                ('velocity', 3.5), ("spectrum_width", 2.5), ("spectrum_width", 3.5),
+                ("reflectivity", 4.5), ("velocity", 4.5), ("spectrum_width", 4.5)]
+
 elif args.input_channels == 2:
     CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5)]
 elif args.input_channels == 3:
@@ -94,18 +106,6 @@ elif args.input_channels == 9:
     CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
                 ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5),
                 ("reflectivity", 2.5), ("velocity", 2.5), ("spectrum_width", 2.5)]
-elif args.input_channels == 12:
-    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
-                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5),
-                ("reflectivity", 2.5), ("velocity", 2.5), ("spectrum_width", 2.5),
-                ("reflectivity", 3.5), ("velocity", 3.5), ("spectrum_width", 3.5)]
-elif args.input_channels == 15:
-    CHANNELS = [("reflectivity", 0.5), ("reflectivity", 1.5), ("velocity", 0.5),
-                ('velocity', 1.5), ("spectrum_width", 0.5), ("spectrum_width", 1.5),
-                ("reflectivity", 2.5), ("reflectivity", 3.5), ("velocity", 2.5),
-                ('velocity', 3.5), ("spectrum_width", 2.5), ("spectrum_width", 3.5),
-                ("reflectivity", 4.5), ("velocity", 4.5), ("spectrum_width", 4.5)]
-
 NORMALIZERS = {
     'reflectivity':              pltc.Normalize(vmin=  -5, vmax= 35),
     'velocity':                  pltc.Normalize(vmin= -15, vmax= 15),
@@ -193,7 +193,7 @@ if args.adaptor != 'None':
     cfg.ADAPTOR_IN_CHANNELS = len(CHANNELS)*3
     cfg.MODEL.PIXEL_MEAN = []
     cfg.MODEL.PIXEL_STD = []
-    for i in range(cfg.ADAPTOR_IN_CHANNELS):
+    for _ in range(cfg.ADAPTOR_IN_CHANNELS):
         cfg.MODEL.PIXEL_MEAN.append(127.5)
         cfg.MODEL.PIXEL_STD.append(1.0)
 
@@ -210,30 +210,23 @@ def get_roost_dicts(split):
 
     dataset_dicts = []
     scan_id_to_idx = {}
-    idx = 0
-    for scan_id in scan_list:
+    for idx, scan_id in enumerate(scan_list):
         # GPS: calculate neighbor frames indices
         neighbor_frame_id = []
         current_day = dataset["scans"][scan_id]['key'].split('_')[0][-2::]
-        if scan_id == 0: # GPS: repeat current frame
-            neighbor_frame_id.append(idx)
-            neighbor_frame_id.append(idx)
-        elif scan_id == 1: # GPS: repeat previous frame
-            neighbor_frame_id.append(idx - 1)
-            neighbor_frame_id.append(idx - 1)
+        if scan_id == 0:
+            neighbor_frame_id.extend((idx, idx))
+        elif scan_id == 1:
+            neighbor_frame_id.extend((idx - 1, idx - 1))
         else:
             previous_day  = dataset["scans"][scan_id - 1]['key'].split('_')[0][-2::]
             previous_day2 = dataset["scans"][scan_id - 2]['key'].split('_')[0][-2::]
             if current_day != previous_day:
-                neighbor_frame_id.append(idx)
-                neighbor_frame_id.append(idx)
+                neighbor_frame_id.extend((idx, idx))
             elif current_day != previous_day2:
-                neighbor_frame_id.append(idx - 1)
-                neighbor_frame_id.append(idx - 1)
+                neighbor_frame_id.extend((idx - 1, idx - 1))
             else:
-                neighbor_frame_id.append(idx - 1)
-                neighbor_frame_id.append(idx - 2)
-
+                neighbor_frame_id.extend((idx - 1, idx - 2))
         if "v0.1.0" in DATASET:
             array_path = os.path.join(ARRAY_DIR, "v0.1.0", dataset["scans"][scan_id]["array_path"])
         elif "v0.2.0" in DATASET:
@@ -250,8 +243,6 @@ def get_roost_dicts(split):
             "width": dataset["info"]["array_shape"][-2],
             "annotations": []
         })
-        idx += 1
-
     scan_id_set = set(scan_id_to_idx)
     for anno in dataset["annotations"]:
         if args.test_dataset in SWALLOW_ROOST_DATASET_VERSIONS and anno['subcategory'] != 'swallow-roost': continue
@@ -275,11 +266,10 @@ for d in SPLITS:
     DatasetCatalog.register(f"{DATASET}_{d}", lambda d=d: get_roost_dicts(d))
     MetadataCatalog.get(f"{DATASET}_{d}").set(thing_classes=["roost"])
 
-# GPS: load datasets to load neighbor frames
-split_dicts = {}
-for d in SPLITS:
-    split_dicts[d] = get_detection_dataset_dicts(f"{DATASET}_{d}", filter_empty=False)
-
+split_dicts = {
+    d: get_detection_dataset_dicts(f"{DATASET}_{d}", filter_empty=False)
+    for d in SPLITS
+}
 if args.visualize:
     roost_metadata = MetadataCatalog.get(f"{DATASET}_test")
     dataset_dicts = get_detection_dataset_dicts(f"{DATASET}_test", filter_empty=False)

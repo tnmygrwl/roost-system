@@ -11,10 +11,10 @@ with open(DATASET_JSON) as f:
 attributes = dataset["info"]["array_fields"]
 elevations = dataset["info"]["array_elevations"]
 
-sizes = []
-for anno in dataset["annotations"]:
-    sizes.append((anno["bbox"][2] + anno["bbox"][3]) / 2.)
-
+sizes = [
+    (anno["bbox"][2] + anno["bbox"][3]) / 2.0
+    for anno in dataset["annotations"]
+]
 np.set_printoptions(precision=2)
 hist, bins = np.histogram(sizes, 30)
 print("hist", hist)

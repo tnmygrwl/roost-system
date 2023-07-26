@@ -8,9 +8,12 @@ def euclid_distance(p, q):
 
 def is_box_nested(box1, box2):
     # check if box1 is nested in box2
-    if box1[0] >= box2[0] and box1[1] >= box2[1] and box1[2] <= box2[2] and box1[3] <= box2[3]:
-        return True
-    return False
+    return (
+        box1[0] >= box2[0]
+        and box1[1] >= box2[1]
+        and box1[2] <= box2[2]
+        and box1[3] <= box2[3]
+    )
 
 def geo_dist_km(coor1, coor2):
     return distance.distance(coor1, coor2).km

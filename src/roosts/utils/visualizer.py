@@ -94,10 +94,12 @@ class Visualizer:
         fileUtil.mkdir(outdir)
         outpaths = []
 
-        dets_multi_thresh = {} 
-        for score_thresh in [0.0, 0.05, 0.1, 0.3, 0.5, 0.7]:
-            dets_multi_thresh[score_thresh] = [det for det in detections if det["det_score"] >= score_thresh]
-
+        dets_multi_thresh = {
+            score_thresh: [
+                det for det in detections if det["det_score"] >= score_thresh
+            ]
+            for score_thresh in [0.0, 0.05, 0.1, 0.3, 0.5, 0.7]
+        }
         for image_path in tqdm(image_paths, desc="Visualizing"):
 
             image = cv2.imread(image_path)
@@ -221,18 +223,16 @@ class Visualizer:
         ax = fig.add_axes([0.0, 0.0, 1.0, 1.0])
         ax.axis("off")
         ax.imshow(image, extent=(0, self.width, self.height, 0), interpolation="nearest")
-       
+
         for det in detections:
             x, y, r = det["im_bbox"]
-            score = det["det_score"]
-
             ax.add_patch(
                 plt.Rectangle((x-r, y-r), 
                                2*r,
                                2*r, fill=False,
                                edgecolor= '#FF00FF', linewidth=3)
                 )
-            if  display_option == "track_ID":
+            if display_option == "track_ID":
                 if "track_ID" in det.keys():
                     ax.text(x-r, y-r-2,
                             '{:d}'.format(det["track_ID"]),
@@ -250,11 +250,13 @@ class Visualizer:
                         bbox=dict(facecolor='blue', alpha=0.7),
                         fontsize=14, color='white')
             else: # det_score
+                score = det["det_score"]
+
                 ax.text(x-r, y-r-2,
                         '{:.3f}'.format(score),
                         bbox=dict(facecolor='#FF00FF', alpha=0.7),
                         fontsize=14, color='white')
-        fig.savefig(outname) 
+        fig.savefig(outname)
         plt.close()
 
 
@@ -263,19 +265,14 @@ class Visualizer:
             imageio may load the image in a different format from matplotlib,
             so I just reload the images from local disk by imageio.imread 
         """
-        seq = []
         image_paths.sort()
-        for image_path in image_paths:
-            seq.append(imageio.imread(image_path))
+        seq = [imageio.imread(image_path) for image_path in image_paths]
         kargs = {"duration": 0.5}
         imageio.mimsave(outpath, seq, "GIF", **kargs)
             
 
     def save_predicted_tracks(self, detections, tracks, outpath):
-        det_dict = {}
-        for det in detections:
-            det_dict[det["det_ID"]] = det
-
+        det_dict = {det["det_ID"]: det for det in detections}
         with open(outpath, 'a+') as f:
             n_tracks = 0
             for track in tqdm(tracks, desc="Write tracks into csv"):

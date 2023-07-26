@@ -24,11 +24,11 @@ try:
     args_list = STATIONS_TIMES
 except:
     args_list = [(s, t[0], t[1]) for s in STATIONS for t in TIMES]
+is_canadian = True
 for args in args_list:
     station = args[0]
     start = args[1]
     end = args[2]
-    is_canadian = True
     slurm_logs = f"slurm_logs/{EXPERIMENT_NAME}/{station}"
     slurm_output = os.path.join(slurm_logs, f"{station}_{start}_{end}.out")
     slurm_error = os.path.join(slurm_logs, f"{station}_{start}_{end}.err")
@@ -52,6 +52,6 @@ for args in args_list:
     --station {station} --start {start} --end {end} --is_canadian={is_canadian}\
     --sun_activity {SUN_ACTIVITY} --min_before {MIN_BEFORE} --min_after {MIN_AFTER} \
     --data_root {DATA_ROOT} --model_version {MODEL_VERSION}'''
-    
+
     os.system(cmd)
     time.sleep(1)

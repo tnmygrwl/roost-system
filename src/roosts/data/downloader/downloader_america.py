@@ -36,9 +36,9 @@ class DownloaderAmerica(Downloader):
                     aws_secret_access_key=self.aws_secret_access_key,
                 )
                 valid_keys.append(key)
-                logger.info('[Download Success] scan %s' % key.split("/")[-1])
+                logger.info(f'[Download Success] scan {key.split("/")[-1]}')
             except Exception as ex:
-                logger.error('[Download Failure] scan %s - %s' % (key.split("/")[-1], str(ex)))
+                logger.error(f'[Download Failure] scan {key.split("/")[-1]} - {str(ex)}')
 
         return valid_keys
 
