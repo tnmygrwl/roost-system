@@ -193,15 +193,23 @@ def get_roost_dicts(split):
 
     dataset_dicts = []
     scan_id_to_idx = {}
-    idx = 0
-    for scan_id in scan_list:
+    for idx, scan_id in enumerate(scan_list):
         if "v0.1.0" in DATASET:
             array_path = os.path.join(ARRAY_DIR, "v0.1.0", dataset["scans"][scan_id]["array_path"])
         elif "v0.2" in DATASET: # TODO: hard coded
-            if dataset["scans"][scan_id]["dataset_version"] == "v0.1.0":
-                array_path = os.path.join(ARRAY_DIR, "v0.1.0", dataset["scans"][scan_id]["array_path"])
-            else: # datasets v0.2.B all share the arrays v0.2.0
-                array_path = os.path.join(ARRAY_DIR, "v0.2.0", dataset["scans"][scan_id]["array_path"])
+            array_path = (
+                os.path.join(
+                    ARRAY_DIR,
+                    "v0.1.0",
+                    dataset["scans"][scan_id]["array_path"],
+                )
+                if dataset["scans"][scan_id]["dataset_version"] == "v0.1.0"
+                else os.path.join(
+                    ARRAY_DIR,
+                    "v0.2.0",
+                    dataset["scans"][scan_id]["array_path"],
+                )
+            )
         scan_id_to_idx[scan_id] = idx
         dataset_dicts.append({
             "file_name": array_path,
@@ -210,8 +218,6 @@ def get_roost_dicts(split):
             "width": dataset["info"]["array_shape"][-2],
             "annotations": []
         })
-        idx += 1
-
     for anno in dataset["annotations"]:
         if "v0.1.0" not in DATASET and anno['subcategory'] == 'bad-track': continue # skip bad tracks
 

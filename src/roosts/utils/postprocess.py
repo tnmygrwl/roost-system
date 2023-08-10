@@ -53,10 +53,9 @@ class Postprocess():
         with open(windfarm_database, 'r') as f:
             reader = csv.reader(f)
             wind_farm_list = list(reader)
-        for entity in wind_farm_list[1:]:
-            lon = float(entity[-2])
-            lat = float(entity[-1])
-            wind_farm_coors.append((lat, lon))
+        wind_farm_coors.extend(
+            (float(entity[-1]), float(entity[-2])) for entity in wind_farm_list[1:]
+        )
         return wind_farm_coors
 
     def _build_ball_tree(self, windfarm_database):
@@ -77,10 +76,7 @@ class Postprocess():
         X = [[float(det[1]), float(det[0])]] # in order of lat and lon
         r = float(det[2]) / 1000.
         distances, indices = self.windfarm_ball_tree.kneighbors(X)
-        if distances[0, 0] < r:
-            return True
-        else:
-            return False
+        return distances[0, 0] < r
 
 
     #################### Precipitation ####################
@@ -98,28 +94,22 @@ class Postprocess():
         dualpol_pred = BIRD * np.ones(dualpol.shape)  # 2: bird
         dualpol_pred[np.isnan(dualpol)] = NAN # 1: nan
         # make area with nan value smaller than dualpol_threshold
-        dualpol[np.isnan(dualpol)] = dualpol_threshold - 1 
+        dualpol[np.isnan(dualpol)] = dualpol_threshold - 1
         dualpol_pred[dualpol > dualpol_threshold] =  RAIN # 3: rain
 
         # statistic
         rain_count = np.sum(dualpol_pred[y-r:y+r, x-r:x+r] == RAIN)
         bird_count = np.sum(dualpol_pred[y-r:y+r, x-r:x+r] == BIRD)
 
-        if rain_count > bird_count:
-            return True
-        else:
-            return False
+        return rain_count > bird_count
 
 
     #################### Post-processing ####################
     def filter_untracked_dets(self, detections, tracks):
-        det_dict = {}
-        for det in detections:
-            det_dict[det["det_ID"]] = det
+        det_dict = {det["det_ID"]: det for det in detections}
         new_detections = []
         for track in tracks:
-            for det_ID in track["det_IDs"]:
-                new_detections.append(det_dict[det_ID])
+            new_detections.extend(det_dict[det_ID] for det_ID in track["det_IDs"])
         return new_detections
 
     def geo_converter(self, detections):
@@ -209,10 +199,7 @@ class Postprocess():
                     bbox = det_dict[det_ID]["im_bbox"]
                     scanname = det_dict[det_ID]["scanname"]
                     dualpol = dualpol_data[scanname]
-                    if dualpol is not None:
-                        flag = self._is_there_rain(bbox, dualpol)
-                    else:
-                        flag = False
+                    flag = self._is_there_rain(bbox, dualpol) if dualpol is not None else False
                     rain_flags.append(flag)
                 track["is_rain"] = max(rain_flags)
                 for det_ID in track["det_IDs"]:

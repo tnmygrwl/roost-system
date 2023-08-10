@@ -8,8 +8,10 @@ STATIONS = ["KEWX"] # ["KDFX", "KSJT", "KGRK"]
 TIMES = []
 for year in range(2000, 2021):
     # for (start_date, end_date) in [("0101", "0331"), ("0401", "0630"), ("0701", "0930"), ("1001", "1231")]:
-    for (start_date, end_date) in [("0101", "1231")]:
-        TIMES.append((str(year)+start_date, str(year)+end_date))
+    TIMES.extend(
+        (str(year) + start_date, str(year) + end_date)
+        for start_date, end_date in [("0101", "1231")]
+    )
 # or
 # STATIONS_TIMES = [
 #     ("KDFX", "20060101", "20061231"),
@@ -32,7 +34,7 @@ for args in args_list:
     station = args[0]
     start = args[1]
     end = args[2]
-    
+
     slurm_logs = f"slurm_logs/{EXPERIMENT_NAME}/{station}"
     slurm_output = os.path.join(slurm_logs, f"{station}_{start}_{end}.out")
     slurm_error = os.path.join(slurm_logs, f"{station}_{start}_{end}.err")
@@ -56,6 +58,6 @@ for args in args_list:
     --station {station} --start {start} --end {end} \
     --sun_activity {SUN_ACTIVITY} --min_before {MIN_BEFORE} --min_after {MIN_AFTER} \
     --data_root {DATA_ROOT} --model_version {MODEL_VERSION}'''
-    
+
     os.system(cmd)
     time.sleep(1)

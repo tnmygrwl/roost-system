@@ -11,7 +11,7 @@ CKPTS = [99999] # range(24999, 150000, 25000) # [99999]
 EVAL_STRATEGY = 1 # ignore <15x15 in 1200x1200
 
 EXPDIR_TESTDATA = [
-    (f"09_3_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 4)
+    ("09_3_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", 4)
 ]
 # EXPDIR_TESTDATA = [
 #     (f"09_{i}_seed2_resnet101-FPN_detptr_anc10_regsl1_imsz1200_lr0.001_it150k", j) for i in [3, 4] for j in range(1, 5)
@@ -55,7 +55,7 @@ for (exp_name, test_dataset) in EXPDIR_TESTDATA:
         ckpt_path = os.path.join(log_dir, exp_name, f"model_{i:07d}.pth")
         if os.path.exists(ckpt_path):
             eval_name = f"eval{test_dataset}_{exp_name}_ckpt{i}_strt{EVAL_STRATEGY}"
-            script_path = os.path.join(script_dir, eval_name+".sbatch")
+            script_path = os.path.join(script_dir, f"{eval_name}.sbatch")
             eval_name_brief = f"eval{test_dataset}_ckpt{i}_strt{EVAL_STRATEGY}"
             output_dir = os.path.join(log_dir, exp_name, eval_name_brief)
             os.makedirs(output_dir, exist_ok=True)
@@ -64,21 +64,16 @@ for (exp_name, test_dataset) in EXPDIR_TESTDATA:
                 f.write('#!/bin/bash\n')
                 f.write('hostname\n')
                 f.write(
-                    ''.join((
-                            f'python eval_roost_detector.py',
-                            f' --test_dataset {test_dataset}'
-                            f' --ckpt_path {ckpt_path} --eval_strategy {EVAL_STRATEGY}',
-                            f' --imsize {imsize}'
-                            f' --network {network} --anchor_strategy {anchor_strategy}',
+                    ''.join(
+                        (
+                            'python eval_roost_detector.py',
+                            f' --test_dataset {test_dataset} --ckpt_path {ckpt_path} --eval_strategy {EVAL_STRATEGY}',
+                            f' --imsize {imsize} --network {network} --anchor_strategy {anchor_strategy}',
                             f' --output_dir {output_dir}',
-                    ))
+                        )
+                    )
                 )
-            if exp_idx < 0:
-                partition = "gypsum-m40-phd"
-            elif exp_idx < 0:
-                partition = "gypsum-titanx-phd"
-            else:
-                partition = "gypsum-1080ti-phd" # TODO
+            partition = "gypsum-m40-phd" if exp_idx < 0 else "gypsum-1080ti-phd"
             launch_file.write(
                 f'sbatch -o {slurm_dir}/{eval_name}_%J.out '
                 f'-p {partition} --exclude={GPU_NODES_TO_EXCLUDE} --gres=gpu:1 '

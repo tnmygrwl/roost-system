@@ -80,7 +80,7 @@ class COCOeval:
         self._paramsEval = {}               # parameters for evaluation
         self.stats = []                     # result summarization
         self.ious = {}                      # ious between all gts and dts
-        if not cocoGt is None:
+        if cocoGt is not None:
             self.params.imgIds = sorted(cocoGt.getImgIds())
             self.params.catIds = sorted(cocoGt.getCatIds())
 
@@ -131,10 +131,10 @@ class COCOeval:
         print('Running per image evaluation...')
         p = self.params
         # add backward compatibility if useSegm is specified in params
-        if not p.useSegm is None:
+        if p.useSegm is not None:
             p.iouType = 'segm' if p.useSegm == 1 else 'bbox'
-            print('useSegm (deprecated) is not None. Running {} evaluation'.format(p.iouType))
-        print('Evaluate annotation type *{}*'.format(p.iouType))
+            print(f'useSegm (deprecated) is not None. Running {p.iouType} evaluation')
+        print(f'Evaluate annotation type *{p.iouType}*')
         p.imgIds = list(np.unique(p.imgIds))
         if p.useCats:
             p.catIds = list(np.unique(p.catIds))
@@ -145,10 +145,10 @@ class COCOeval:
         # loop through images, area range, max detection number
         catIds = p.catIds if p.useCats else [-1]
 
-        if p.iouType == 'segm' or p.iouType == 'bbox':
+        if p.iouType in ['segm', 'bbox']:
             computeIoU = self.computeIoU
         self.ious = {(imgId, catId): computeIoU(imgId, catId) \
-                        for imgId in p.imgIds
+                            for imgId in p.imgIds
                         for catId in catIds}
 
         evaluateImg = self.evaluateImg
@@ -175,21 +175,20 @@ class COCOeval:
         inds = np.argsort([-d['score'] for d in dt], kind='mergesort')
         dt = [dt[i] for i in inds]
         if len(dt) > p.maxDets[-1]:
-            dt=dt[0:p.maxDets[-1]]
+            dt = dt[:p.maxDets[-1]]
 
-        if p.iouType == 'segm':
-            g = [g['segmentation'] for g in gt]
-            d = [d['segmentation'] for d in dt]
-        elif p.iouType == 'bbox':
+        if p.iouType == 'bbox':
             g = [g['bbox'] for g in gt]
             d = [d['bbox'] for d in dt]
+        elif p.iouType == 'segm':
+            g = [g['segmentation'] for g in gt]
+            d = [d['segmentation'] for d in dt]
         else:
             raise Exception('unknown iouType for iou computation')
 
         # compute iou between each dt and gt region
         iscrowd = [int(o['iscrowd']) for o in gt]
-        ious = maskUtils.iou(d,g,iscrowd)
-        return ious
+        return maskUtils.iou(d,g,iscrowd)
 
     def evaluateImg(self, imgId, catId, aRng, maxDet):
         '''
@@ -216,7 +215,7 @@ class COCOeval:
         gtind = np.argsort([g['_ignore'] for g in gt], kind='mergesort')
         gt = [gt[i] for i in gtind]
         dtind = np.argsort([-d['score'] for d in dt], kind='mergesort')
-        dt = [dt[i] for i in dtind[0:maxDet]]
+        dt = [dt[i] for i in dtind[:maxDet]]
         iscrowd = [int(o['iscrowd']) for o in gt]
         # load computed ious
         ious = self.ious[imgId, catId][:, gtind] if len(self.ious[imgId, catId]) > 0 else self.ious[imgId, catId]
@@ -228,7 +227,7 @@ class COCOeval:
         dtm  = np.zeros((T,D))
         gtIg = np.array([g['_ignore'] for g in gt])
         dtIg = np.zeros((T,D))
-        if not len(ious)==0:
+        if len(ious) != 0:
             for tind, t in enumerate(p.iouThrs):
                 for dind, d in enumerate(dt):
                     # information about best match so far (m=-1 -> unmatched)
@@ -303,7 +302,7 @@ class COCOeval:
         setI = set(_pe.imgIds)
         # get inds to evaluate
         k_list = [n for n, k in enumerate(p.catIds)  if k in setK]
-        m_list = [m for n, m in enumerate(p.maxDets) if m in setM]
+        m_list = [m for m in p.maxDets if m in setM]
         a_list = [n for n, a in enumerate(map(lambda x: tuple(x), p.areaRng)) if a in setA]
         i_list = [n for n, i in enumerate(p.imgIds)  if i in setI]
         I0 = len(_pe.imgIds)
@@ -315,10 +314,10 @@ class COCOeval:
                 Na = a0*I0
                 for m, maxDet in enumerate(m_list):
                     E = [self.evalImgs[Nk + Na + i] for i in i_list]
-                    E = [e for e in E if not e is None]
-                    if len(E) == 0:
+                    E = [e for e in E if e is not None]
+                    if not E:
                         continue
-                    dtScores = np.concatenate([e['dtScores'][0:maxDet] for e in E])
+                    dtScores = np.concatenate([e['dtScores'][:maxDet] for e in E])
 
                     # different sorting method generates slightly different results.
                     # mergesort is used to be consistent as Matlab implementation.
@@ -345,14 +344,11 @@ class COCOeval:
                         q  = np.zeros((R,))
                         ss = np.zeros((R,))
 
-                        if nd:
-                            recall[t,k,a,m] = rc[-1]
-                        else:
-                            recall[t,k,a,m] = 0
-
+                        recall[t,k,a,m] = rc[-1] if nd else 0
                         # numpy is slow without cython optimization for accessing elements
                         # use python array gets significant speed improvement
-                        pr = pr.tolist(); q = q.tolist()
+                        pr = pr.tolist()
+                        q = q.tolist()
 
                         for i in range(nd-1, 0, -1):
                             if pr[i] > pr[i-1]:
@@ -389,7 +385,7 @@ class COCOeval:
             titleStr = 'Average Precision' if ap == 1 else 'Average Recall'
             typeStr = '(AP)' if ap==1 else '(AR)'
             iouStr = '{:0.2f}:{:0.2f}'.format(p.iouThrs[0], p.iouThrs[-1]) \
-                if iouThr is None else '{:0.2f}'.format(iouThr)
+                    if iouThr is None else '{:0.2f}'.format(iouThr)
 
             aind = [i for i, aRng in enumerate(p.areaRngLbl) if aRng == areaRng]
             mind = [i for i, mDet in enumerate(p.maxDets) if mDet == maxDets]
@@ -408,12 +404,10 @@ class COCOeval:
                     t = np.where(iouThr == p.iouThrs)[0]
                     s = s[t]
                 s = s[:,:,aind,mind]
-            if len(s[s>-1])==0:
-                mean_s = -1
-            else:
-                mean_s = np.mean(s[s>-1])
+            mean_s = -1 if len(s[s>-1])==0 else np.mean(s[s>-1])
             print(iStr.format(titleStr, typeStr, iouStr, areaRng, maxDets, mean_s))
             return mean_s
+
         def _summarizeDets():
             stats = np.zeros((12,))
             stats[0] = _summarize(1)
@@ -429,10 +423,11 @@ class COCOeval:
             stats[10] = _summarize(0, areaRng='medium', maxDets=self.params.maxDets[2])
             stats[11] = _summarize(0, areaRng='large', maxDets=self.params.maxDets[2])
             return stats
+
         if not self.eval:
             raise Exception('Please run accumulate() first')
         iouType = self.params.iouType
-        if iouType == 'segm' or iouType == 'bbox':
+        if iouType in ['segm', 'bbox']:
             summarize = _summarizeDets
         self.stats = summarize()
 
@@ -455,7 +450,7 @@ class Params:
         self.useCats = 1
 
     def __init__(self, iouType='bbox'):
-        if iouType == 'segm' or iouType == 'bbox':
+        if iouType in ['segm', 'bbox']:
             self.setDetParams()
         else:
             raise Exception('iouType not supported')

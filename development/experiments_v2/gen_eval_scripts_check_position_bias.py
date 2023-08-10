@@ -93,7 +93,7 @@ for (i, exp_name, test_dataset) in EXPDIR_TESTDATA:
         print("missing path:", ckpt_path)
     else:
         eval_name = f"eval{test_dataset}_{exp_name}_ckpt{i}_strt{EVAL_STRATEGY}"
-        script_path = os.path.join(script_dir, eval_name+".sbatch")
+        script_path = os.path.join(script_dir, f"{eval_name}.sbatch")
         eval_name_brief = f"eval{test_dataset}_ckpt{i}_strt{EVAL_STRATEGY}"
         output_dir = os.path.join(log_dir, exp_name, eval_name_brief)
         os.makedirs(output_dir, exist_ok=True)
@@ -102,14 +102,14 @@ for (i, exp_name, test_dataset) in EXPDIR_TESTDATA:
             f.write('#!/bin/bash\n')
             f.write('hostname\n')
             f.write(
-                ''.join((
-                        f'python eval_roost_detector.py',
-                        f' --test_dataset {test_dataset}'
-                        f' --ckpt_path {ckpt_path} --eval_strategy {EVAL_STRATEGY}',
-                        f' --imsize {imsize}'
-                        f' --network {network} --anchor_strategy {anchor_strategy}',
+                ''.join(
+                    (
+                        'python eval_roost_detector.py',
+                        f' --test_dataset {test_dataset} --ckpt_path {ckpt_path} --eval_strategy {EVAL_STRATEGY}',
+                        f' --imsize {imsize} --network {network} --anchor_strategy {anchor_strategy}',
                         f' --output_dir {output_dir}',
-                ))
+                    )
+                )
             )
         if exp_idx < 100:
             partition = "rtx8000-short"

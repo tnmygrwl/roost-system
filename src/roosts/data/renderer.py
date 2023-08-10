@@ -142,22 +142,22 @@ class Renderer:
                 else:
                     radar = pyart.io.read_nexrad_archive(os.path.join(self.download_dir, key))
             except Exception as ex:
-                logger.error('[Scan Loading Failure] scan %s - %s' % (scan, str(ex)))
+                logger.error(f'[Scan Loading Failure] scan {scan} - {str(ex)}')
                 continue
 
             try:
                 data, _, _, y, x = radar2mat(radar, **self.array_render_config)
-                logger.info('[Array Rendering Success] scan %s' % scan)
+                logger.info(f'[Array Rendering Success] scan {scan}')
                 arrays["array"] = data
             except Exception as ex:
-                logger.error('[Array Rendering Failure] scan %s - %s' % (scan, str(ex)))
+                logger.error(f'[Array Rendering Failure] scan {scan} - {str(ex)}')
 
             try:
                 data, _, _, y, x = radar2mat(radar, **self.dualpol_render_config)
-                logger.info('[Dualpol Rendering Success] scan %s' % scan)
+                logger.info(f'[Dualpol Rendering Success] scan {scan}')
                 arrays["dualpol_array"] = data
             except Exception as ex:
-                logger.error('[Dualpol Rendering Failure] scan %s - %s' % (scan, str(ex)))
+                logger.error(f'[Dualpol Rendering Failure] scan {scan} - {str(ex)}')
 
             if "array" in arrays:
                 np.savez_compressed(npz_path, **arrays)

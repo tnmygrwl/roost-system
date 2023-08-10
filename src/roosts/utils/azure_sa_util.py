@@ -20,12 +20,8 @@ def datetime_range(start=None, end=None, delta=timedelta(minutes=1), inclusive=T
         Generator object
     """
     t = start or datetime.now()
-    
-    if inclusive:
-        keep_going = lambda s, e: s <= e
-    else:
-        keep_going = lambda s, e: s < e
 
+    keep_going = (lambda s, e: s <= e) if inclusive else (lambda s, e: s < e)
     while keep_going(t, end):
         yield t
         t = t + delta
@@ -45,8 +41,7 @@ def blob_date_prefix(t):
             blob name: 2022060100_06_ODIMH5_PVOL6S_VOL_CASET.h5
         return val: 20220601
     """
-    prefix = '%04d%02d%02d' % (t.year, t.month, t.day)
-    return prefix
+    return '%04d%02d%02d' % (t.year, t.month, t.day)
 
 def obtain_blob_timestamp(key):
     _, key = os.path.split(key)

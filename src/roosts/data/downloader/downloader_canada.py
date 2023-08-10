@@ -61,9 +61,9 @@ class DownloaderCanada(Downloader):
                     sa_connection_str=self.sa_connection_str
                 )
                 valid_keys.append(file_download_loc)
-                logger.info('[Download Success] scan %s' % file_download_name)
+                logger.info(f'[Download Success] scan {file_download_name}')
             except Exception as ex:
-                logger.error('[Download Failure] scan %s - %s' % (file_download_name, str(ex)))
+                logger.error(f'[Download Failure] scan {file_download_name} - {str(ex)}')
 
         return valid_keys
 
